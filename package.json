@@ -9,11 +9,20 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@radix-ui/themes": "^3.3.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.577.0",
     "next": "16.1.7",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@iconify-json/tabler": "^1.2.31",
+    "@iconify/tailwind4": "^1.2.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

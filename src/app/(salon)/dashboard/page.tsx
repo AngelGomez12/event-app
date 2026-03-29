@@ -1,0 +1,133 @@
+'use client';
+
+import { useEventStore } from '@/store/useEventStore';
+import { useEffect } from 'react';
+import { Card, Heading, Text, Badge, Flex, Box, Separator } from '@radix-ui/themes';
+import { Calendar, Users, DollarSign, TrendingUp } from 'lucide-react';
+
+export default function Dashboard() {
+  const { eventos, fetchEventos, isLoading } = useEventStore();
+
+  useEffect(() => {
+    fetchEventos();
+  }, [fetchEventos]);
+
+  const confirmados = eventos.filter(e => e.estado === 'confirmado').length;
+  const pendientes = eventos.length - confirmados;
+
+  return (
+    <Flex direction="column" gap="6">
+      <Flex direction="column" gap="1">
+        <Heading size="7" weight="bold">Dashboard General</Heading>
+        <Text size="2" color="gray">Resumen de tu salón de eventos</Text>
+      </Flex>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card size="3">
+          <Flex justify="between" align="start" mb="3">
+            <Text size="2" color="gray" weight="medium">Eventos Confirmados</Text>
+            <Box style={{ color: 'var(--green-9)' }}>
+              <Calendar size={18} />
+            </Box>
+          </Flex>
+          <Heading size="8" weight="bold" style={{ color: 'var(--green-11)' }}>
+            {confirmados || 0}
+          </Heading>
+          <Text size="1" color="gray" mt="1">En el próximo mes</Text>
+        </Card>
+
+        <Card size="3">
+          <Flex justify="between" align="start" mb="3">
+            <Text size="2" color="gray" weight="medium">Próximos Pendientes</Text>
+            <Box style={{ color: 'var(--amber-9)' }}>
+              <Users size={18} />
+            </Box>
+          </Flex>
+          <Heading size="8" weight="bold" style={{ color: 'var(--amber-11)' }}>
+            {pendientes || 0}
+          </Heading>
+          <Text size="1" color="gray" mt="1">Requieren atención</Text>
+        </Card>
+
+        <Card size="3">
+          <Flex justify="between" align="start" mb="3">
+            <Text size="2" color="gray" weight="medium">Ingresos Estimados</Text>
+            <Box style={{ color: 'var(--violet-9)' }}>
+              <DollarSign size={18} />
+            </Box>
+          </Flex>
+          <Heading size="8" weight="bold" style={{ color: 'var(--violet-11)' }}>
+            $12,000
+          </Heading>
+          <Flex align="center" gap="1" mt="1">
+            <TrendingUp size={12} style={{ color: 'var(--green-9)' }} />
+            <Text size="1" color="green">+20% desde el mes pasado</Text>
+          </Flex>
+        </Card>
+      </div>
+
+      {/* Bottom Section */}
+      <div className="grid gap-4 lg:grid-cols-7">
+        {/* Próximos Eventos */}
+        <div className="lg:col-span-4">
+          <Card size="3">
+            <Heading size="4" mb="4">Próximos Eventos</Heading>
+            <Separator size="4" mb="4" />
+            {isLoading ? (
+              <Text color="gray" size="2">Cargando eventos...</Text>
+            ) : eventos.length === 0 ? (
+              <Text color="gray" size="2">No hay eventos próximos.</Text>
+            ) : (
+              <Flex direction="column" gap="3">
+                {eventos.map((evento) => (
+                  <Flex key={evento.id} justify="between" align="center" p="3"
+                    style={{ borderRadius: 'var(--radius-3)', background: 'var(--gray-2)' }}
+                  >
+                    <Flex direction="column" gap="1">
+                      <Text size="2" weight="bold">{evento.nombre_agasajado}</Text>
+                      <Text size="1" color="gray">
+                        {evento.fecha} · {evento.tipo === 'boda' ? '💍 Boda' : '🎉 15 Años'}
+                      </Text>
+                    </Flex>
+                    <Badge
+                      color={evento.estado === 'confirmado' ? 'green' : 'amber'}
+                      variant="soft"
+                      radius="full"
+                    >
+                      {evento.estado.toUpperCase()}
+                    </Badge>
+                  </Flex>
+                ))}
+              </Flex>
+            )}
+          </Card>
+        </div>
+
+        {/* Actividad Reciente */}
+        <div className="lg:col-span-3">
+          <Card size="3">
+            <Heading size="4" mb="4">Actividad Reciente</Heading>
+            <Separator size="4" mb="4" />
+            <Flex direction="column" gap="3">
+              <Flex justify="between" align="center">
+                <Text size="2">Nueva consulta recibida</Text>
+                <Text size="1" color="gray">Hace 2h</Text>
+              </Flex>
+              <Separator size="4" style={{ opacity: 0.4 }} />
+              <Flex justify="between" align="center">
+                <Text size="2">Pago de seña - Martina</Text>
+                <Text size="1" color="gray">Hace 5h</Text>
+              </Flex>
+              <Separator size="4" style={{ opacity: 0.4 }} />
+              <Flex justify="between" align="center">
+                <Text size="2">Cambio de fecha - Clara</Text>
+                <Text size="1" color="gray">Ayer</Text>
+              </Flex>
+            </Flex>
+          </Card>
+        </div>
+      </div>
+    </Flex>
+  );
+}

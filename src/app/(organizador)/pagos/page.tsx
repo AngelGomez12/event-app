@@ -1,0 +1,171 @@
+'use client';
+
+import { useState } from 'react';
+import { Button, Card, Heading, Text, Badge, Table, Dialog, TextField, Select, Flex, Box, Separator } from '@radix-ui/themes';
+import { Plus, Trash, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+
+type TipoMovimiento = 'ingreso' | 'egreso';
+
+interface Movimiento {
+    id: string;
+    concepto: string;
+    monto: number;
+    tipo: TipoMovimiento;
+    fecha: string;
+}
+
+export default function PagosPage() {
+    const [movimientos, setMovimientos] = useState<Movimiento[]>([
+        { id: '1', concepto: 'Seña Salón', monto: 50000, tipo: 'egreso', fecha: '2026-02-15' },
+        { id: '2', concepto: 'Ayuda de Papá', monto: 100000, tipo: 'ingreso', fecha: '2026-03-01' },
+    ]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [concepto, setConcepto] = useState('');
+    const [monto, setMonto] = useState('');
+    const [tipo, setTipo] = useState<TipoMovimiento>('egreso');
+
+    const handleAdd = (e: React.FormEvent) => {
+        e.preventDefault();
+        setMovimientos([...movimientos, {
+            id: Math.random().toString(),
+            concepto,
+            monto: Number(monto),
+            tipo,
+            fecha: new Date().toISOString().split('T')[0],
+        }]);
+        setIsModalOpen(false);
+        setConcepto('');
+        setMonto('');
+    };
+
+    const handleDelete = (id: string) => setMovimientos(movimientos.filter(m => m.id !== id));
+
+    const totalIngresos = movimientos.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0);
+    const totalEgresos = movimientos.filter(m => m.tipo === 'egreso').reduce((s, m) => s + m.monto, 0);
+    const balance = totalIngresos - totalEgresos;
+
+    return (
+        <Flex direction="column" gap="6">
+            <Flex justify="between" align="center">
+                <Flex direction="column" gap="1">
+                    <Heading size="7" weight="bold">Control de Gastos</Heading>
+                    <Text size="2" color="gray">Seguí tus ingresos y egresos del evento</Text>
+                </Flex>
+
+                <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <Dialog.Trigger>
+                        <Button size="3" color="violet"><Plus size={16} /> Registrar Movimiento</Button>
+                    </Dialog.Trigger>
+                    <Dialog.Content size="4" style={{ maxWidth: 440 }}>
+                        <Dialog.Title>Registrar Movimiento</Dialog.Title>
+                        <Dialog.Description size="2" color="gray" mb="4">Completá los datos del movimiento.</Dialog.Description>
+                        <Separator size="4" mb="4" />
+                        <form onSubmit={handleAdd}>
+                            <Flex direction="column" gap="4">
+                                <Box>
+                                    <Text as="label" size="2" weight="medium">Concepto</Text>
+                                    <TextField.Root mt="1" size="3" placeholder="Ej: Fotógrafo, Catering..."
+                                        value={concepto} onChange={(e) => setConcepto(e.target.value)} required />
+                                </Box>
+                                <Box>
+                                    <Text as="label" size="2" weight="medium">Monto</Text>
+                                    <TextField.Root mt="1" size="3" type="number" placeholder="0.00"
+                                        value={monto} onChange={(e) => setMonto(e.target.value)} required />
+                                </Box>
+                                <Box>
+                                    <Text as="div" size="2" weight="medium" mb="1">Tipo</Text>
+                                    <Select.Root value={tipo} onValueChange={(v: TipoMovimiento) => setTipo(v)} size="3">
+                                        <Select.Trigger style={{ width: '100%' }} />
+                                        <Select.Content color="violet">
+                                            <Select.Item value="egreso">💸 Gasto (Egreso)</Select.Item>
+                                            <Select.Item value="ingreso">💰 Ingreso / Ahorro</Select.Item>
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Box>
+                                <Separator size="4" />
+                                <Flex gap="3" justify="end">
+                                    <Dialog.Close>
+                                        <Button variant="soft" color="gray" type="button" size="3">Cancelar</Button>
+                                    </Dialog.Close>
+                                    <Button type="submit" color="violet" size="3">Guardar</Button>
+                                </Flex>
+                            </Flex>
+                        </form>
+                    </Dialog.Content>
+                </Dialog.Root>
+            </Flex>
+
+            {/* Stats */}
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card size="3" style={{ border: '1px solid var(--green-5)', background: 'var(--green-1)' }}>
+                    <Flex justify="between" align="start" mb="3">
+                        <Text size="2" weight="medium" style={{ color: 'var(--green-11)' }}>Ingresos Totales</Text>
+                        <TrendingUp size={18} style={{ color: 'var(--green-9)' }} />
+                    </Flex>
+                    <Heading size="7" weight="bold" style={{ color: 'var(--green-11)' }}>${totalIngresos.toLocaleString()}</Heading>
+                </Card>
+
+                <Card size="3" style={{ border: '1px solid var(--red-5)', background: 'var(--red-1)' }}>
+                    <Flex justify="between" align="start" mb="3">
+                        <Text size="2" weight="medium" style={{ color: 'var(--red-11)' }}>Gastos Totales</Text>
+                        <TrendingDown size={18} style={{ color: 'var(--red-9)' }} />
+                    </Flex>
+                    <Heading size="7" weight="bold" style={{ color: 'var(--red-11)' }}>${totalEgresos.toLocaleString()}</Heading>
+                </Card>
+
+                <Card size="3" style={{
+                    border: balance >= 0 ? '1px solid var(--violet-5)' : '1px solid var(--orange-5)',
+                    background: balance >= 0 ? 'var(--violet-1)' : 'var(--orange-1)',
+                }}>
+                    <Flex justify="between" align="start" mb="3">
+                        <Text size="2" weight="medium" style={{ color: balance >= 0 ? 'var(--violet-11)' : 'var(--orange-11)' }}>Balance Actual</Text>
+                        <DollarSign size={18} style={{ color: balance >= 0 ? 'var(--violet-9)' : 'var(--orange-9)' }} />
+                    </Flex>
+                    <Heading size="7" weight="bold" style={{ color: balance >= 0 ? 'var(--violet-11)' : 'var(--orange-11)' }}>
+                        ${balance.toLocaleString()}
+                    </Heading>
+                </Card>
+            </div>
+
+            {/* Table */}
+            <Card size="3">
+                <Heading size="4" mb="4">Historial de Movimientos</Heading>
+                <Separator size="4" mb="4" />
+                <Table.Root variant="surface">
+                    <Table.Header>
+                        <Table.Row>
+                            <Table.ColumnHeaderCell>Fecha</Table.ColumnHeaderCell>
+                            <Table.ColumnHeaderCell>Concepto</Table.ColumnHeaderCell>
+                            <Table.ColumnHeaderCell>Tipo</Table.ColumnHeaderCell>
+                            <Table.ColumnHeaderCell justify="end">Monto</Table.ColumnHeaderCell>
+                            <Table.ColumnHeaderCell></Table.ColumnHeaderCell>
+                        </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                        {movimientos.map((mov) => (
+                            <Table.Row key={mov.id} align="center">
+                                <Table.Cell><Text size="2" color="gray">{mov.fecha}</Text></Table.Cell>
+                                <Table.Cell><Text size="2" weight="medium">{mov.concepto}</Text></Table.Cell>
+                                <Table.Cell>
+                                    <Badge color={mov.tipo === 'ingreso' ? 'green' : 'red'} variant="soft" radius="full">
+                                        {mov.tipo.toUpperCase()}
+                                    </Badge>
+                                </Table.Cell>
+                                <Table.Cell justify="end">
+                                    <Text size="2" weight="bold" style={{ color: mov.tipo === 'ingreso' ? 'var(--green-11)' : 'var(--red-11)' }}>
+                                        {mov.tipo === 'ingreso' ? '+' : '-'}${mov.monto.toLocaleString()}
+                                    </Text>
+                                </Table.Cell>
+                                <Table.Cell>
+                                    <Button variant="ghost" size="1" color="red" onClick={() => handleDelete(mov.id)}>
+                                        <Trash size={14} />
+                                    </Button>
+                                </Table.Cell>
+                            </Table.Row>
+                        ))}
+                    </Table.Body>
+                </Table.Root>
+            </Card>
+        </Flex>
+    );
+}
