@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "@radix-ui/themes/styles.css";
 import "./globals.css";
 import { Theme } from "@radix-ui/themes";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
+import { GlobalNotificationAlert } from "@/components/GlobalNotificationAlert";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +38,8 @@ export default function RootLayout({
           scaling="100%"
           appearance="light"
         >
+          <GlobalNotificationAlert />
+          <ImpersonationBanner />
           {children}
         </Theme>
       </body>

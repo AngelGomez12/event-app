@@ -1,20 +1,96 @@
-// Placeholder for API configuration
-// This will be replaced with actual Axios/Fetch implementation when connecting to NestJS
+export enum SubscriptionPlan {
+  BASIC = "BASIC",
+  PREMIUM = "PREMIUM",
+  ENTERPRISE = "ENTERPRISE",
+}
+
+export enum TenantStatus {
+  TRIAL = "TRIAL",
+  ACTIVE = "ACTIVE",
+  SUSPENDED = "SUSPENDED",
+  PENDING_PAYMENT = "PENDING_PAYMENT",
+}
+
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  customDomain: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  primaryColor: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  maxGuestCapacity: number;
+  timezone: string;
+  defaultCurrency: string;
+  subscriptionPlan: SubscriptionPlan;
+  status: TenantStatus;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export enum Role {
+  SUPER_ADMIN = "SUPER_ADMIN",
+  ADMIN_SALON = "SALON_ADMIN",
+  ORGANIZADOR = "ORGANIZER",
+}
+
+export interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  role: Role;
+  tenantId?: string;
+}
+
+export interface OnboardingRegisterDto {
+  salonName: string;
+  email: string;
+  password: string;
+  plan: SubscriptionPlan;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  user: User;
+}
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
-  }
-
-  return response.json();
-}
+export const api = {
+  get: async (endpoint: string) => {
+    const res = await fetch(`${API_URL}${endpoint}`);
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+  },
+  post: async (endpoint: string, data: unknown) => {
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+  },
+  put: async (endpoint: string, data: unknown) => {
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+  },
+  delete: async (endpoint: string) => {
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+  },
+};

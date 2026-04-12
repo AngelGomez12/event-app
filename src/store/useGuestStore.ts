@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { guestService } from '@/services/guest.service';
 
 export interface Invitado {
   id: string;
@@ -39,7 +40,10 @@ export const useGuestStore = create<GuestState>((set) => ({
   fetchInvitados: async (eventoId) => {
     set({ isLoading: true, error: null });
     try {
-      // Lógica de API: await api.get(`/eventos/${eventoId}/invitados`);
+      // Usar servicio real:
+      // const data = await guestService.getInvitados(eventoId);
+      // set({ invitados: data, isLoading: false });
+      
       await new Promise(resolve => setTimeout(resolve, 1000));
       // Fake data
       const fakeGuests: Invitado[] = [
@@ -55,7 +59,7 @@ export const useGuestStore = create<GuestState>((set) => ({
   addInvitado: async (invitado) => {
       set({ isLoading: true, error: null });
       try {
-          // await api.post('/invitados', invitado);
+          // const nuevoInvitado = await guestService.addInvitado(invitado);
           await new Promise(resolve => setTimeout(resolve, 500));
           const nuevoInvitado = { ...invitado, id: Math.random().toString() };
           set((state) => ({
@@ -69,7 +73,8 @@ export const useGuestStore = create<GuestState>((set) => ({
 
   updateEstadoInvitado: async (id, nuevoEstado) => {
     try {
-      // Lógica de API: await api.patch(`/invitados/${id}`, { estado: nuevoEstado });
+      // Usar servicio real:
+      // await guestService.updateEstado(id, nuevoEstado);
       
       // Actualización optimista en el estado local:
       set((state) => ({
@@ -84,7 +89,8 @@ export const useGuestStore = create<GuestState>((set) => ({
 
   assignMesa: async (id, mesaId) => {
       try {
-          // API call
+          // Usar servicio real:
+          // await guestService.assignMesa(id, mesaId === 'none' ? undefined : mesaId);
           set((state) => ({
               invitados: state.invitados.map(inv =>
                   inv.id === id ? { ...inv, mesaId: mesaId === 'none' ? undefined : mesaId } : inv
@@ -96,6 +102,7 @@ export const useGuestStore = create<GuestState>((set) => ({
   },
 
   addMesa: (nombre: string) => {
+      // Opcional: const nuevaMesa = await guestService.addMesa({ nombre });
       set((state) => ({
           mesas: [...state.mesas, { id: Math.random().toString(), nombre }]
       }));

@@ -1,19 +1,72 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button, Card, Heading, Text, TextField, Flex, Box, Separator } from '@radix-ui/themes';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Button, Card, Heading, Text, TextField, Flex, Box, Separator, Callout } from '@radix-ui/themes';
+import Link from 'next/link';
+import { authService } from '@/services/auth.service';
+import { tenantService } from '@/services/tenant.service';
+import { Role } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [role, setRole] = useState<'salon' | 'organizador'>('salon');
+  const searchParams = useSearchParams();
+  const registered = searchParams.get('registered');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (role === 'salon') {
-      router.push('/dashboard');
-    } else {
-      router.push('/mi-evento');
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      const result = await authService.login(email, password);
+      // Validar si logeó bien y redirigir
+      const { user } = result.data;
+      const role = user.role;
+
+      if (role === Role.SUPER_ADMIN) {
+        router.push('/super-admin/dashboard');
+      } else if (role === Role.ADMIN_SALON) {
+        router.push('/dashboard'); // (salon)
+      } else if (role === Role.ORGANIZADOR) {
+        router.push('/mi-evento'); // (organizador)
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (err: any) {
+      // Manejo de redirección si el pago está pendiente
+      if (err.message?.includes('pending payment')) {
+        setError('Verificando estado de pago...');
+        try {
+          const res = await tenantService.getPaymentLink(email);
+
+          if (res.activated) {
+            setError('¡Pago confirmado! Tu cuenta ha sido activada. Por favor, ingresa de nuevo.');
+            return;
+          }
+
+          if (res.initPoint || res.sandboxInitPoint) {
+            setError('Pago pendiente. Redirigiendo a Mercado Pago...');
+            setTimeout(() => {
+              window.location.href = res.initPoint || res.sandboxInitPoint;
+            }, 1500);
+            return;
+          }
+        } catch (paymentErr) {
+          setError('Pago pendiente, pero no pudimos obtener el link. Contacte a soporte.');
+        }
+      } else {
+        setError(err.message || 'Error al iniciar sesión');
+      }
+    }
+ finally {
+      setLoading(false);
     }
   };
 
@@ -25,11 +78,22 @@ export default function LoginPage() {
           <Text size="2" color="gray">Inicia sesión para gestionar tus eventos</Text>
         </Flex>
 
+        {registered && (
+          <Box mb="4">
+            <Callout.Root color="green">
+              <Callout.Text>
+                ¡Registro exitoso! Ya puedes iniciar sesión con tus credenciales.
+              </Callout.Text>
+            </Callout.Root>
+          </Box>
+        )}
+
         <form onSubmit={handleLogin}>
           <Flex direction="column" gap="4">
             <Box>
               <Text as="label" size="2" weight="medium" htmlFor="email">Email</Text>
               <TextField.Root
+                name="email"
                 id="email"
                 type="email"
                 placeholder="usuario@ejemplo.com"
@@ -42,6 +106,7 @@ export default function LoginPage() {
             <Box>
               <Text as="label" size="2" weight="medium" htmlFor="password">Contraseña</Text>
               <TextField.Root
+                name="password"
                 id="password"
                 type="password"
                 placeholder="••••••••"
@@ -51,37 +116,26 @@ export default function LoginPage() {
               />
             </Box>
 
+            {error && (
+              <Text size="2" style={{ color: 'var(--ruby-11)' }}>
+                {error}
+              </Text>
+            )}
+
             <Separator size="4" />
 
-            <Box>
-              <Text as="div" size="1" weight="bold" color="gray" mb="2" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Rol para Demo
-              </Text>
-              <Flex gap="2">
-                <Button
-                  type="button"
-                  variant={role === 'salon' ? 'solid' : 'surface'}
-                  color={role === 'salon' ? 'violet' : 'gray'}
-                  style={{ flex: 1 }}
-                  onClick={() => setRole('salon')}
-                >
-                  Dueño Salón
-                </Button>
-                <Button
-                  type="button"
-                  variant={role === 'organizador' ? 'solid' : 'surface'}
-                  color={role === 'organizador' ? 'violet' : 'gray'}
-                  style={{ flex: 1 }}
-                  onClick={() => setRole('organizador')}
-                >
-                  Organizador
-                </Button>
-              </Flex>
-            </Box>
-
-            <Button type="submit" size="3" color="violet" style={{ width: '100%', fontWeight: 700 }}>
-              Ingresar como {role === 'salon' ? 'Administrador' : 'Agasajado'}
+            <Button type="submit" size="3" color="violet" style={{ width: '100%', fontWeight: 700 }} disabled={loading}>
+              {loading ? 'Ingresando...' : 'Ingresar'}
             </Button>
+
+            <Flex justify="center" mt="2">
+              <Text size="2">
+                ¿Aún no tienes un salón?{' '}
+                <Link href="/register" style={{ color: 'var(--violet-10)', fontWeight: 600 }}>
+                  Regístrate aquí
+                </Link>
+              </Text>
+            </Flex>
           </Flex>
         </form>
       </Card>

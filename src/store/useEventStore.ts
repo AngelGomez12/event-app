@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { eventService } from '@/services/event.service';
 
 // Definimos los tipos de datos (esto luego lo puedes sacar de tus interfaces compartidas)
 export interface Evento {
@@ -27,9 +28,9 @@ export const useEventStore = create<EventState>((set) => ({
   fetchEventos: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Aquí harías tu llamado real a NestJS usando fetch o Axios
-      // const response = await api.get('/eventos');
-      // set({ eventos: response.data, isLoading: false });
+      // Usar el servicio real para obtener eventos
+      // const data = await eventService.getAll();
+      // set({ eventos: data, isLoading: false });
       
       // Simulamos la respuesta para el MVP:
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -46,7 +47,7 @@ export const useEventStore = create<EventState>((set) => ({
   addEvento: async (nuevoEvento) => {
     set({ isLoading: true, error: null });
     try {
-      // await api.post('/eventos', nuevoEvento);
+      // const eventoCreado = await eventService.create(nuevoEvento);
       
       // Simulamos la creación agregándolo al estado actual
       await new Promise(resolve => setTimeout(resolve, 500));
