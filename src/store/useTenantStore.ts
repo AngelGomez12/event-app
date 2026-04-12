@@ -12,20 +12,24 @@ export interface TenantStats {
 
 interface TenantState {
   tenants: Tenant[];
+  currentTenant: Tenant | null;
   stats: TenantStats | null;
   isLoading: boolean;
   error: string | null;
 
   // Acciones
   fetchTenants: () => Promise<void>;
+  fetchCurrentTenant: () => Promise<void>;
   fetchStats: () => Promise<void>;
   addTenant: (name: string, customDomain: string) => Promise<void>;
   updateTenantStatus: (id: string, status: string) => Promise<void>;
   updateTenant: (id: string, data: Partial<Tenant>) => Promise<void>;
+  updateCurrentTenant: (data: Partial<Tenant>) => Promise<void>;
 }
 
 export const useTenantStore = create<TenantState>((set) => ({
   tenants: [],
+  currentTenant: null,
   stats: null,
   isLoading: false,
   error: null,
@@ -47,6 +51,17 @@ export const useTenantStore = create<TenantState>((set) => ({
       set({ stats });
     } catch (error: unknown) {
       console.error('Error al cargar estadísticas', error);
+    }
+  },
+
+  fetchCurrentTenant: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const tenant = await tenantService.getMe();
+      set({ currentTenant: tenant, isLoading: false });
+    } catch (error: unknown) {
+      const err = error as Error;
+      set({ error: err.message || 'Error al obtener mi salón', isLoading: false });
     }
   },
 
@@ -78,9 +93,9 @@ export const useTenantStore = create<TenantState>((set) => ({
       set({ error: err.message || 'Error al actualizar estado', isLoading: false });
       throw error;
     }
-    },
+  },
 
-    updateTenant: async (id: string, data: Partial<Tenant>) => {
+  updateTenant: async (id: string, data: Partial<Tenant>) => {
     set({ isLoading: true, error: null });
     try {
       const updatedTenant = await tenantService.update(id, data);
@@ -93,5 +108,17 @@ export const useTenantStore = create<TenantState>((set) => ({
       set({ error: err.message || 'Error al actualizar salón', isLoading: false });
       throw error;
     }
+  },
+
+  updateCurrentTenant: async (data: Partial<Tenant>) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updatedTenant = await tenantService.updateMe(data);
+      set({ currentTenant: updatedTenant, isLoading: false });
+    } catch (error: unknown) {
+      const err = error as Error;
+      set({ error: err.message || 'Error al actualizar salón', isLoading: false });
+      throw error;
     }
-    }));
+  }
+}));

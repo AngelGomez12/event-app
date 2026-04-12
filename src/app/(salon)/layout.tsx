@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { LayoutDashboard, Calendar, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, Settings, LogOut } from 'lucide-react';
 import { Box, Flex, Text, Heading } from '@radix-ui/themes';
 
 export default function SalonLayout({
@@ -40,6 +40,13 @@ export default function SalonLayout({
             >
               <Calendar size={18} />
               <Text size="2" weight="medium">Calendario</Text>
+            </Link>
+            <Link href="/configuracion" className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors" style={{ color: 'var(--violet-3)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--violet-11)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <Settings size={18} />
+              <Text size="2" weight="medium">Configuración</Text>
             </Link>
           </Flex>
         </Box>

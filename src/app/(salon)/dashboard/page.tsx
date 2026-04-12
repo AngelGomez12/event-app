@@ -1,19 +1,25 @@
 'use client';
 
 import { useEventStore } from '@/store/useEventStore';
+import { useTenantStore } from '@/store/useTenantStore';
 import { useEffect } from 'react';
-import { Card, Heading, Text, Badge, Flex, Box, Separator } from '@radix-ui/themes';
-import { Calendar, Users, DollarSign, TrendingUp } from 'lucide-react';
+import { Card, Heading, Text, Badge, Flex, Box, Separator, Button, Callout } from '@radix-ui/themes';
+import { Calendar, Users, DollarSign, TrendingUp, AlertCircle, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Dashboard() {
-  const { eventos, fetchEventos, isLoading } = useEventStore();
+  const { eventos, fetchEventos, isLoading: eventsLoading } = useEventStore();
+  const { currentTenant, fetchCurrentTenant } = useTenantStore();
 
   useEffect(() => {
     fetchEventos();
-  }, [fetchEventos]);
+    fetchCurrentTenant();
+  }, [fetchEventos, fetchCurrentTenant]);
 
   const confirmados = eventos.filter(e => e.estado === 'confirmado').length;
   const pendientes = eventos.length - confirmados;
+
+  const isProfileIncomplete = currentTenant && (!currentTenant.address || !currentTenant.city || !currentTenant.contactPhone);
 
   return (
     <Flex direction="column" gap="6">
@@ -21,6 +27,24 @@ export default function Dashboard() {
         <Heading size="7" weight="bold">Dashboard General</Heading>
         <Text size="2" color="gray">Resumen de tu salón de eventos</Text>
       </Flex>
+
+      {isProfileIncomplete && (
+        <Callout.Root color="amber" variant="soft">
+          <Callout.Icon>
+            <AlertCircle size={18} />
+          </Callout.Icon>
+          <Flex justify="between" align="center" style={{ width: '100%' }}>
+            <Callout.Text>
+              Tu perfil de salón está incompleto. Completa la información de contacto y ubicación para que los clientes puedan encontrarte.
+            </Callout.Text>
+            <Button size="1" variant="ghost" asChild>
+              <Link href="/configuracion">
+                Completar Perfil <ArrowRight size={14} />
+              </Link>
+            </Button>
+          </Flex>
+        </Callout.Root>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">

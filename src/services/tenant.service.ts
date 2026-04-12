@@ -77,6 +77,30 @@ export const tenantService = {
     }
   },
 
+  getMe: async (): Promise<Tenant> => {
+    try {
+      const response = await api.get('/tenants/me');
+      return response.data.data;
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Error al obtener mi salón');
+    }
+  },
+
+  updateMe: async (data: Partial<Tenant>): Promise<Tenant> => {
+    try {
+      const response = await api.patch('/tenants/me', data);
+      return response.data.data;
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Error al actualizar mi salón');
+    }
+  },
+
   getPaymentLink: async (email: string): Promise<any> => {
     try {
       const response = await api.get(`/onboarding/payment-link?email=${email}`);
