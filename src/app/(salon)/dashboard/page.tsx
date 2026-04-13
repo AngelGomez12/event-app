@@ -1,3 +1,5 @@
+'use client';
+
 import { useEventStore } from '@/store/useEventStore';
 import { useTenantStore } from '@/store/useTenantStore';
 import { useAuditLogStore } from '@/store/useAuditLogStore';
