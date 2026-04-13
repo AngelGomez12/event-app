@@ -55,6 +55,69 @@ export interface OnboardingRegisterDto {
   plan: SubscriptionPlan;
 }
 
+export enum EventType {
+  WEDDING = "WEDDING",
+  SWEET_15 = "SWEET_15",
+  CORPORATE = "CORPORATE",
+  OTHER = "OTHER",
+}
+
+export enum EventStatus {
+  PENDING_DEPOSIT = "PENDING_DEPOSIT",
+  CONFIRMED = "CONFIRMED",
+  CANCELLED = "CANCELLED",
+}
+
+export enum PaymentMethod {
+  CASH = "CASH",
+  TRANSFER = "TRANSFER",
+  CREDIT_CARD = "CREDIT_CARD",
+  DEBIT_CARD = "DEBIT_CARD",
+  MERCADO_PAGO = "MERCADO_PAGO",
+  OTHER = "OTHER",
+}
+
+export interface EventPayment {
+  id: string;
+  amount: number;
+  method: PaymentMethod;
+  paymentDate: string;
+  referenceNumber?: string;
+  notes?: string;
+  eventId: string;
+  createdAt: string;
+}
+
+export interface Event {
+  id: string;
+  honoreeName: string;
+  type: EventType;
+  date: string; // ISO string
+  status: EventStatus;
+  approximateGuestCount: number;
+  basePrice: number;
+  tenantId: string;
+  organizerId: string;
+  payments?: EventPayment[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateEventDto {
+  honoreeName: string;
+  type: EventType;
+  date: string;
+  approximateGuestCount: number;
+  organizerId: string;
+}
+
+export interface CreateUserDto {
+  fullName: string;
+  email: string;
+  password?: string;
+  role: Role;
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: User;

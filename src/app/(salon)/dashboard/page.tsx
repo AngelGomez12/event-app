@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { Card, Heading, Text, Badge, Flex, Box, Separator, Button, Callout } from '@radix-ui/themes';
 import { Calendar, Users, DollarSign, TrendingUp, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { EventStatus, EventType } from '@/lib/api';
 
 export default function Dashboard() {
   const { eventos, fetchEventos, isLoading: eventsLoading } = useEventStore();
@@ -16,10 +17,16 @@ export default function Dashboard() {
     fetchCurrentTenant();
   }, [fetchEventos, fetchCurrentTenant]);
 
-  const confirmados = eventos.filter(e => e.estado === 'confirmado').length;
-  const pendientes = eventos.length - confirmados;
+  const confirmados = Array.isArray(eventos) ? eventos.filter(e => e.status === EventStatus.CONFIRMED).length : 0;
+  const pendientes = Array.isArray(eventos) ? eventos.length - confirmados : 0;
 
   const isProfileIncomplete = currentTenant && (!currentTenant.address || !currentTenant.city || !currentTenant.contactPhone);
+
+  const proximosEventos = Array.isArray(eventos) 
+    ? [...eventos]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(0, 5)
+    : [];
 
   return (
     <Flex direction="column" gap="6">
@@ -98,28 +105,32 @@ export default function Dashboard() {
           <Card size="3">
             <Heading size="4" mb="4">Próximos Eventos</Heading>
             <Separator size="4" mb="4" />
-            {isLoading ? (
+            {eventsLoading ? (
               <Text color="gray" size="2">Cargando eventos...</Text>
-            ) : eventos.length === 0 ? (
+            ) : (!Array.isArray(eventos) || proximosEventos.length === 0) ? (
               <Text color="gray" size="2">No hay eventos próximos.</Text>
             ) : (
               <Flex direction="column" gap="3">
-                {eventos.map((evento) => (
+                {proximosEventos.map((evento) => (
                   <Flex key={evento.id} justify="between" align="center" p="3"
                     style={{ borderRadius: 'var(--radius-3)', background: 'var(--gray-2)' }}
                   >
                     <Flex direction="column" gap="1">
-                      <Text size="2" weight="bold">{evento.nombre_agasajado}</Text>
+                      <Text size="2" weight="bold">{evento.honoreeName}</Text>
                       <Text size="1" color="gray">
-                        {evento.fecha} · {evento.tipo === 'boda' ? '💍 Boda' : '🎉 15 Años'}
+                        {new Date(evento.date).toLocaleDateString()} · {evento.type === EventType.WEDDING ? '💍 Boda' : evento.type === EventType.SWEET_15 ? '🎉 15 Años' : evento.type === EventType.CORPORATE ? '🏢 Corp' : '🌟 Otro'}
                       </Text>
                     </Flex>
                     <Badge
-                      color={evento.estado === 'confirmado' ? 'green' : 'amber'}
+                      color={
+                        evento.status === EventStatus.CONFIRMED ? 'green' : 
+                        evento.status === EventStatus.PENDING_DEPOSIT ? 'orange' : 
+                        'red'
+                      }
                       variant="soft"
                       radius="full"
                     >
-                      {evento.estado.toUpperCase()}
+                      {evento.status}
                     </Badge>
                   </Flex>
                 ))}

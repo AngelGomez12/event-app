@@ -16,32 +16,56 @@ import {
     Box,
     Separator,
 } from '@radix-ui/themes';
-import { Plus, CalendarDays, Hash } from 'lucide-react';
+import { Plus, CalendarDays, Hash, Users as UsersIcon } from 'lucide-react';
+import { EventStatus, EventType, User } from '@/lib/api';
+import { userService } from '@/services/user.service';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import Link from 'next/link';
 
 export default function EventosPage() {
     const { eventos, fetchEventos, addEvento, isLoading } = useEventStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [users, setUsers] = useState<User[]>([]);
 
-    const [nombre, setNombre] = useState('');
+    const [honoreeName, setHonoreeName] = useState('');
     const [fecha, setFecha] = useState('');
-    const [tipo, setTipo] = useState<'boda' | '15'>('15');
+    const [tipo, setTipo] = useState<EventType>(EventType.SWEET_15);
+    const [guestCount, setGuestCount] = useState(100);
+    const [organizerId, setOrganizerId] = useState('');
 
     useEffect(() => {
         fetchEventos();
     }, [fetchEventos]);
 
+    const fetchUsers = async () => {
+        try {
+            const data = await userService.getAll();
+            setUsers(data);
+            if (data.length > 0) setOrganizerId(data[0].id);
+        } catch (error) {
+            console.error('Error fetching users', error);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await addEvento({
-            nombre_agasajado: nombre,
-            fecha,
-            tipo,
-            estado: 'pendiente',
-        });
-        setIsModalOpen(false);
-        setNombre('');
-        setFecha('');
-        setTipo('15');
+        try {
+            await addEvento({
+                honoreeName,
+                date: new Date(fecha).toISOString(),
+                type: tipo,
+                approximateGuestCount: Number(guestCount),
+                organizerId,
+            });
+            setIsModalOpen(false);
+            setHonoreeName('');
+            setFecha('');
+            setTipo(EventType.BIRTHDAY_15);
+            setGuestCount(100);
+        } catch (error) {
+            console.error('Failed to create event', error);
+        }
     };
 
     return (
@@ -53,7 +77,10 @@ export default function EventosPage() {
                     <Text size="2" color="gray">Administrá todos los eventos del salón</Text>
                 </Flex>
 
-                <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <Dialog.Root open={isModalOpen} onOpenChange={(open) => {
+                    setIsModalOpen(open);
+                    if (open) fetchUsers();
+                }}>
                     <Dialog.Trigger>
                         <Button size="3" color="violet">
                             <Plus size={16} />
@@ -78,8 +105,8 @@ export default function EventosPage() {
                                     <TextField.Root
                                         id="nombre"
                                         placeholder="Ej: Martina, Juan y Ana"
-                                        value={nombre}
-                                        onChange={(e) => setNombre(e.target.value)}
+                                        value={honoreeName}
+                                        onChange={(e) => setHonoreeName(e.target.value)}
                                         required
                                         mt="1"
                                         size="3"
@@ -90,24 +117,45 @@ export default function EventosPage() {
                                     </TextField.Root>
                                 </Box>
 
-                                <Box>
-                                    <Text as="label" size="2" weight="medium" htmlFor="fecha">
-                                        Fecha del Evento
-                                    </Text>
-                                    <TextField.Root
-                                        id="fecha"
-                                        type="date"
-                                        value={fecha}
-                                        onChange={(e) => setFecha(e.target.value)}
-                                        required
-                                        mt="1"
-                                        size="3"
-                                    >
-                                        <TextField.Slot>
-                                            <CalendarDays size={14} />
-                                        </TextField.Slot>
-                                    </TextField.Root>
-                                </Box>
+                                <Flex gap="4">
+                                    <Box style={{ flex: 1 }}>
+                                        <Text as="label" size="2" weight="medium" htmlFor="fecha">
+                                            Fecha del Evento
+                                        </Text>
+                                        <TextField.Root
+                                            id="fecha"
+                                            type="datetime-local"
+                                            value={fecha}
+                                            onChange={(e) => setFecha(e.target.value)}
+                                            required
+                                            mt="1"
+                                            size="3"
+                                        >
+                                            <TextField.Slot>
+                                                <CalendarDays size={14} />
+                                            </TextField.Slot>
+                                        </TextField.Root>
+                                    </Box>
+                                    <Box style={{ width: '120px' }}>
+                                        <Text as="label" size="2" weight="medium" htmlFor="guests">
+                                            Invitados
+                                        </Text>
+                                        <TextField.Root
+                                            id="guests"
+                                            type="number"
+                                            min="1"
+                                            value={guestCount}
+                                            onChange={(e) => setGuestCount(Number(e.target.value))}
+                                            required
+                                            mt="1"
+                                            size="3"
+                                        >
+                                            <TextField.Slot>
+                                                <UsersIcon size={14} />
+                                            </TextField.Slot>
+                                        </TextField.Root>
+                                    </Box>
+                                </Flex>
 
                                 <Box>
                                     <Text as="div" size="2" weight="medium" mb="1">
@@ -115,13 +163,34 @@ export default function EventosPage() {
                                     </Text>
                                     <Select.Root
                                         value={tipo}
-                                        onValueChange={(val: 'boda' | '15') => setTipo(val)}
+                                        onValueChange={(val: EventType) => setTipo(val)}
                                         size="3"
                                     >
                                         <Select.Trigger style={{ width: '100%' }} />
                                         <Select.Content color="violet">
-                                            <Select.Item value="15">🎉 15 Años</Select.Item>
-                                            <Select.Item value="boda">💍 Boda</Select.Item>
+                                            <Select.Item value={EventType.SWEET_15}>🎉 15 Años</Select.Item>
+                                            <Select.Item value={EventType.WEDDING}>💍 Boda</Select.Item>
+                                            <Select.Item value={EventType.CORPORATE}>🏢 Corporativo</Select.Item>
+                                            <Select.Item value={EventType.OTHER}>🌟 Otro</Select.Item>
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Box>
+
+                                <Box>
+                                    <Text as="div" size="2" weight="medium" mb="1">
+                                        Organizador Responsable
+                                    </Text>
+                                    <Select.Root
+                                        value={organizerId}
+                                        onValueChange={(val) => setOrganizerId(val)}
+                                        size="3"
+                                        required
+                                    >
+                                        <Select.Trigger style={{ width: '100%' }} placeholder="Seleccionar organizador" />
+                                        <Select.Content color="violet">
+                                            {users.map(u => (
+                                                <Select.Item key={u.id} value={u.id}>{u.fullName}</Select.Item>
+                                            ))}
                                         </Select.Content>
                                     </Select.Root>
                                 </Box>
@@ -148,7 +217,7 @@ export default function EventosPage() {
             <Card size="3">
                 <Flex justify="between" align="center" mb="4">
                     <Heading size="4">Listado de Eventos</Heading>
-                    <Text size="1" color="gray">{eventos.length} evento{eventos.length !== 1 ? 's' : ''} registrado{eventos.length !== 1 ? 's' : ''}</Text>
+                    <Text size="1" color="gray">{Array.isArray(eventos) ? eventos.length : 0} evento{eventos?.length !== 1 ? 's' : ''} registrado{eventos?.length !== 1 ? 's' : ''}</Text>
                 </Flex>
                 <Separator size="4" mb="4" />
 
@@ -156,7 +225,7 @@ export default function EventosPage() {
                     <Flex justify="center" py="6">
                         <Text color="gray" size="2">Cargando eventos...</Text>
                     </Flex>
-                ) : eventos.length === 0 ? (
+                ) : (!Array.isArray(eventos) || eventos.length === 0) ? (
                     <Flex justify="center" py="8" direction="column" align="center" gap="2">
                         <Text size="4">📋</Text>
                         <Text color="gray" size="2">No hay eventos registrados aún.</Text>
@@ -171,6 +240,7 @@ export default function EventosPage() {
                                 <Table.ColumnHeaderCell>Fecha</Table.ColumnHeaderCell>
                                 <Table.ColumnHeaderCell>Agasajado/s</Table.ColumnHeaderCell>
                                 <Table.ColumnHeaderCell>Tipo</Table.ColumnHeaderCell>
+                                <Table.ColumnHeaderCell>Invitados (Aprox)</Table.ColumnHeaderCell>
                                 <Table.ColumnHeaderCell>Estado</Table.ColumnHeaderCell>
                                 <Table.ColumnHeaderCell>Acciones</Table.ColumnHeaderCell>
                             </Table.Row>
@@ -179,26 +249,41 @@ export default function EventosPage() {
                             {eventos.map((evento) => (
                                 <Table.Row key={evento.id} align="center">
                                     <Table.Cell>
-                                        <Text size="2" color="gray">{evento.fecha}</Text>
+                                        <Text size="2" color="gray">
+                                            {format(new Date(evento.date), "dd/MM/yy HH:mm", { locale: es })}
+                                        </Text>
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <Text size="2" weight="medium">{evento.nombre_agasajado}</Text>
+                                        <Text size="2" weight="medium">{evento.honoreeName}</Text>
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <Text size="2">{evento.tipo === 'boda' ? '💍 Boda' : '🎉 15 Años'}</Text>
+                                        <Text size="2">
+                                            {evento.type === EventType.WEDDING ? '💍 Boda' : 
+                                             evento.type === EventType.SWEET_15 ? '🎉 15 Años' : 
+                                             evento.type === EventType.CORPORATE ? '🏢 Corp' : '🌟 Otro'}
+                                        </Text>
+                                    </Table.Cell>
+                                    <Table.Cell>
+                                        <Text size="2">{evento.approximateGuestCount}</Text>
                                     </Table.Cell>
                                     <Table.Cell>
                                         <Badge
-                                            color={evento.estado === 'confirmado' ? 'green' : 'amber'}
+                                            color={
+                                                evento.status === EventStatus.CONFIRMED ? 'green' : 
+                                                evento.status === EventStatus.PENDING_DEPOSIT ? 'orange' : 
+                                                'red'
+                                            }
                                             variant="soft"
                                             radius="full"
                                         >
-                                            {evento.estado}
+                                            {evento.status}
                                         </Badge>
                                     </Table.Cell>
                                     <Table.Cell>
-                                        <Button variant="ghost" size="1" color="violet">
-                                            Ver Detalle →
+                                        <Button variant="ghost" size="1" color="violet" asChild>
+                                            <Link href={`/eventos/${evento.id}`}>
+                                                Ver Detalle →
+                                            </Link>
                                         </Button>
                                     </Table.Cell>
                                 </Table.Row>

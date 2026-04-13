@@ -6,6 +6,7 @@ import { Card, Heading, Text, Flex, Box } from '@radix-ui/themes';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { EventType } from '@/lib/api';
 
 export default function CalendarPage() {
   const { eventos, fetchEventos } = useEventStore();
@@ -62,7 +63,9 @@ export default function CalendarPage() {
           {allCells.map((day, idx) => {
             if (!day) return <div key={`empty-${idx}`} style={{ minHeight: 100 }} />;
 
-            const dayEvents = eventos.filter(e => isSameDay(new Date(e.fecha), day));
+            const dayEvents = Array.isArray(eventos) 
+              ? eventos.filter(e => isSameDay(new Date(e.date), day))
+              : [];
             const isToday = isSameDay(day, new Date());
             const isCurrentMonth = isSameMonth(day, currentMonth);
 
@@ -99,12 +102,12 @@ export default function CalendarPage() {
                   {dayEvents.map(event => (
                     <div
                       key={event.id}
-                      title={event.nombre_agasajado}
+                      title={event.honoreeName}
                       style={{
                         padding: '2px 6px',
                         borderRadius: 'var(--radius-1)',
-                        background: event.tipo === 'boda' ? 'var(--pink-3)' : 'var(--violet-3)',
-                        color: event.tipo === 'boda' ? 'var(--pink-11)' : 'var(--violet-11)',
+                        background: event.type === EventType.WEDDING ? 'var(--pink-3)' : 'var(--violet-3)',
+                        color: event.type === EventType.WEDDING ? 'var(--pink-11)' : 'var(--violet-11)',
                         fontSize: 11,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -112,7 +115,7 @@ export default function CalendarPage() {
                         fontWeight: 500,
                       }}
                     >
-                      {event.nombre_agasajado}
+                      {event.honoreeName}
                     </div>
                   ))}
                 </Flex>

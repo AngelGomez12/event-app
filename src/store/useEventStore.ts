@@ -1,23 +1,20 @@
 import { create } from 'zustand';
 import { eventService } from '@/services/event.service';
-
-// Definimos los tipos de datos (esto luego lo puedes sacar de tus interfaces compartidas)
-export interface Evento {
-  id: string;
-  nombre_agasajado: string;
-  fecha: string;
-  tipo: 'boda' | '15';
-  estado: 'pendiente' | 'confirmado';
-}
+import { Event, CreateEventDto, EventStatus } from '@/lib/api';
 
 interface EventState {
-  eventos: Evento[];
+  eventos: Event[];
   isLoading: boolean;
   error: string | null;
-  
+
   // Acciones
   fetchEventos: () => Promise<void>;
-  addEvento: (nuevoEvento: Omit<Evento, 'id'>) => Promise<void>;
+  addEvento: (nuevoEvento: CreateEventDto) => Promise<void>;
+  updateEstadoEvento: (id: string, status: EventStatus) => Promise<void>;
+  fetchEventoById: (id: string) => Promise<Event>;
+  updateEventPrice: (id: string, basePrice: number) => Promise<void>;
+  addEventPayment: (id: string, paymentData: any) => Promise<void>;
+  removeEventPayment: (eventId: string, paymentId: string) => Promise<void>;
 }
 
 export const useEventStore = create<EventState>((set) => ({
@@ -28,36 +25,83 @@ export const useEventStore = create<EventState>((set) => ({
   fetchEventos: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Usar el servicio real para obtener eventos
-      // const data = await eventService.getAll();
-      // set({ eventos: data, isLoading: false });
-      
-      // Simulamos la respuesta para el MVP:
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const dataSimulada: Evento[] = [
-        { id: '1', nombre_agasajado: 'Martina', fecha: '2026-10-15', tipo: '15', estado: 'confirmado' },
-        { id: '2', nombre_agasajado: 'Clara y Marcos', fecha: '2026-11-20', tipo: 'boda', estado: 'pendiente' }
-      ];
-      set({ eventos: dataSimulada, isLoading: false });
-    } catch (error) {
-      set({ error: 'Error al cargar los eventos', isLoading: false });
+      const data = await eventService.getAll();
+      set({ eventos: data, isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message || 'Error al cargar los eventos', isLoading: false });
     }
   },
 
   addEvento: async (nuevoEvento) => {
     set({ isLoading: true, error: null });
     try {
-      // const eventoCreado = await eventService.create(nuevoEvento);
-      
-      // Simulamos la creación agregándolo al estado actual
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const eventoCreado = { ...nuevoEvento, id: Math.random().toString() };
+      const eventoCreado = await eventService.create(nuevoEvento);
       set((state) => ({ 
         eventos: [...state.eventos, eventoCreado], 
         isLoading: false 
       }));
-    } catch (error) {
-      set({ error: 'Error al crear el evento', isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message || 'Error al crear el evento', isLoading: false });
+      throw error;
     }
-  }
-}));
+  },
+
+  updateEstadoEvento: async (id, status) => {
+    set({ isLoading: true, error: null });
+    try {
+      const eventoActualizado = await eventService.updateStatus(id, status);
+      set((state) => ({
+        eventos: state.eventos.map((e) => (e.id === id ? eventoActualizado : e)),
+        isLoading: false,
+      }));
+    } catch (error: any) {
+      set({ error: error.message || 'Error al actualizar el estado del evento', isLoading: false });
+      throw error;
+    }
+    },
+
+    fetchEventoById: async (id: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const event = await eventService.getById(id);
+      set({ isLoading: false });
+      return event;
+    } catch (error: any) {
+      set({ error: error.message || 'Error al obtener evento', isLoading: false });
+      throw error;
+    }
+    },
+
+    updateEventPrice: async (id: string, basePrice: number) => {
+    set({ isLoading: true, error: null });
+    try {
+      await eventService.updatePrice(id, basePrice);
+      set({ isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message || 'Error al actualizar precio', isLoading: false });
+      throw error;
+    }
+    },
+
+    addEventPayment: async (id: string, paymentData: any) => {
+    set({ isLoading: true, error: null });
+    try {
+      await eventService.addPayment(id, paymentData);
+      set({ isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message || 'Error al registrar pago', isLoading: false });
+      throw error;
+    }
+    },
+
+    removeEventPayment: async (eventId: string, paymentId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await eventService.removePayment(eventId, paymentId);
+      set({ isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message || 'Error al eliminar pago', isLoading: false });
+      throw error;
+    }
+    }
+    }));
