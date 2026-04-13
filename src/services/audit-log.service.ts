@@ -18,10 +18,21 @@ export const auditLogService = {
   getAll: async (page = 1, limit = 50): Promise<{ data: AuditLog[], meta: any }> => {
     try {
       const response = await apiClient.get(`/audit-logs?page=${page}&limit=${limit}`);
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error('Error fetching audit logs', error);
       return { data: [], meta: {} };
     }
   },
-};
+
+  getMyLogs: async (page = 1, limit = 10): Promise<{ data: AuditLog[], meta: any }> => {
+    try {
+      const response = await apiClient.get(`/audit-logs/me?page=${page}&limit=${limit}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching my audit logs', error);
+      return { data: [], meta: {} };
+    }
+  },
+  };
+

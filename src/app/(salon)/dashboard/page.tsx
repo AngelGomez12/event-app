@@ -1,21 +1,24 @@
-'use client';
-
 import { useEventStore } from '@/store/useEventStore';
 import { useTenantStore } from '@/store/useTenantStore';
+import { useAuditLogStore } from '@/store/useAuditLogStore';
 import { useEffect } from 'react';
-import { Card, Heading, Text, Badge, Flex, Box, Separator, Button, Callout } from '@radix-ui/themes';
-import { Calendar, Users, DollarSign, TrendingUp, AlertCircle, ArrowRight } from 'lucide-react';
+import { Card, Heading, Text, Badge, Flex, Box, Separator, Button, Callout, Grid } from '@radix-ui/themes';
+import { Calendar, Users, DollarSign, TrendingUp, AlertCircle, ArrowRight, Plus, CreditCard, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { EventStatus, EventType } from '@/lib/api';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export default function Dashboard() {
   const { eventos, fetchEventos, isLoading: eventsLoading } = useEventStore();
   const { currentTenant, fetchCurrentTenant } = useTenantStore();
+  const { myLogs, fetchMyLogs } = useAuditLogStore();
 
   useEffect(() => {
     fetchEventos();
     fetchCurrentTenant();
-  }, [fetchEventos, fetchCurrentTenant]);
+    fetchMyLogs(1, 5);
+  }, [fetchEventos, fetchCurrentTenant, fetchMyLogs]);
 
   const confirmados = Array.isArray(eventos) ? eventos.filter(e => e.status === EventStatus.CONFIRMED).length : 0;
   const pendientes = Array.isArray(eventos) ? eventos.length - confirmados : 0;
@@ -28,12 +31,52 @@ export default function Dashboard() {
         .slice(0, 5)
     : [];
 
+  const getLogActionText = (action: string, entity: string) => {
+    const actions: any = {
+      'POST': 'Creó',
+      'PATCH': 'Actualizó',
+      'PUT': 'Actualizó',
+      'DELETE': 'Eliminó',
+    };
+    const entities: any = {
+      'Events': 'un evento',
+      'Event_payments': 'un pago',
+      'Tenants': 'la configuración',
+      'Users': 'un usuario',
+    };
+    return `${actions[action] || action} ${entities[entity] || entity}`;
+  };
+
   return (
     <Flex direction="column" gap="6">
-      <Flex direction="column" gap="1">
-        <Heading size="7" weight="bold">Dashboard General</Heading>
-        <Text size="2" color="gray">Resumen de tu salón de eventos</Text>
+      <Flex justify="between" align="center">
+        <Flex direction="column" gap="1">
+          <Heading size="7" weight="bold">Dashboard General</Heading>
+          <Text size="2" color="gray">Resumen de tu salón de eventos</Text>
+        </Flex>
       </Flex>
+
+      {/* Quick Actions */}
+      <Card size="2">
+        <Flex gap="4" align="center">
+          <Text size="2" weight="bold" color="gray" mr="2">ACCESOS RÁPIDOS:</Text>
+          <Button variant="soft" color="violet" asChild>
+            <Link href="/eventos">
+              <Plus size={16} /> Nuevo Evento
+            </Link>
+          </Button>
+          <Button variant="soft" color="green" asChild>
+            <Link href="/eventos">
+              <CreditCard size={16} /> Registrar Cobro
+            </Link>
+          </Button>
+          <Button variant="soft" color="gray" asChild>
+            <Link href="/calendario">
+              <Calendar size={16} /> Ver Calendario
+            </Link>
+          </Button>
+        </Flex>
+      </Card>
 
       {isProfileIncomplete && (
         <Callout.Root color="amber" variant="soft">
@@ -145,20 +188,24 @@ export default function Dashboard() {
             <Heading size="4" mb="4">Actividad Reciente</Heading>
             <Separator size="4" mb="4" />
             <Flex direction="column" gap="3">
-              <Flex justify="between" align="center">
-                <Text size="2">Nueva consulta recibida</Text>
-                <Text size="1" color="gray">Hace 2h</Text>
-              </Flex>
-              <Separator size="4" style={{ opacity: 0.4 }} />
-              <Flex justify="between" align="center">
-                <Text size="2">Pago de seña - Martina</Text>
-                <Text size="1" color="gray">Hace 5h</Text>
-              </Flex>
-              <Separator size="4" style={{ opacity: 0.4 }} />
-              <Flex justify="between" align="center">
-                <Text size="2">Cambio de fecha - Clara</Text>
-                <Text size="1" color="gray">Ayer</Text>
-              </Flex>
+              {myLogs.length > 0 ? (
+                myLogs.map((log) => (
+                  <Box key={log.id}>
+                    <Flex justify="between" align="center" mb="1">
+                      <Text size="2" weight="medium">
+                        {getLogActionText(log.action, log.entity)}
+                      </Text>
+                      <Text size="1" color="gray">
+                        {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true, locale: es })}
+                      </Text>
+                    </Flex>
+                    <Text size="1" color="gray">Por: {log.userEmail || 'Sistema'}</Text>
+                    <Separator size="4" mt="2" style={{ opacity: 0.2 }} />
+                  </Box>
+                ))
+              ) : (
+                <Text size="2" color="gray" align="center" py="4">Sin actividad reciente.</Text>
+              )}
             </Flex>
           </Card>
         </div>
