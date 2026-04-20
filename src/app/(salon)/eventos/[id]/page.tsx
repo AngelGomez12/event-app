@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AddPaymentModal } from './AddPaymentModal';
 import { EditPriceModal } from './EditPriceModal';
+import { EditTableLimitModal } from './EditTableLimitModal';
 
 export default function EventoDetallePage() {
   const params = useParams();
@@ -135,6 +136,15 @@ export default function EventoDetallePage() {
                   <Users size={14} /> <Text size="1" weight="bold">Invitados (Aprox)</Text>
                 </Flex>
                 <Text size="3">{evento.approximateGuestCount} personas</Text>
+              </Box>
+              <Box>
+                <Flex align="center" gap="2" color="gray" mb="1">
+                  <Users size={14} /> <Text size="1" weight="bold">Límite de Mesas</Text>
+                </Flex>
+                <Flex align="center" gap="2">
+                  <Text size="3">{evento.maxTableCount > 0 ? `${evento.maxTableCount} mesas` : 'Sin límite'}</Text>
+                  <EditTableLimitModal eventId={id} currentLimit={evento.maxTableCount} onLimitUpdated={fetchEvento} />
+                </Flex>
               </Box>
               <Box>
                 <Flex align="center" gap="2" color="gray" mb="1">

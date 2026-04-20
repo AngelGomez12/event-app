@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Heading, Text, Badge, Table, Flex, Card, Button, DropdownMenu } from '@radix-ui/themes';
-import { MoreHorizontal, ExternalLink } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, History } from 'lucide-react';
 import { useTenantStore } from '@/store/useTenantStore';
+import { ViewPaymentHistoryModal } from './ViewPaymentHistoryModal';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -97,6 +98,18 @@ export default function SuperAdminPagosPage() {
                         </Button>
                       </DropdownMenu.Trigger>
                       <DropdownMenu.Content>
+                        <ViewPaymentHistoryModal 
+                          tenantId={tenant.id} 
+                          tenantName={tenant.name}
+                          trigger={
+                            <DropdownMenu.Item onSelect={(e) => e.preventDefault()}>
+                              <Flex align="center" gap="2">
+                                <History size={14} /> Ver Historial
+                              </Flex>
+                            </DropdownMenu.Item>
+                          }
+                        />
+                        <DropdownMenu.Separator />
                         <DropdownMenu.Item 
                           onClick={() => handleStatusChange(tenant.id, 'ACTIVE')}
                           disabled={tenant.status === 'ACTIVE'}

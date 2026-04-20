@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, Heading, Text, TextField, Flex, Box, Separator, Callout } from '@radix-ui/themes';
+import { PasswordInput } from '@/components/forms/PasswordInput';
 import Link from 'next/link';
 import { authService } from '@/services/auth.service';
 import { tenantService } from '@/services/tenant.service';
@@ -95,7 +96,9 @@ export default function LoginPage() {
               <TextField.Root
                 name="email"
                 id="email"
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
                 placeholder="usuario@ejemplo.com"
                 required
                 mt="1"
@@ -105,14 +108,14 @@ export default function LoginPage() {
 
             <Box>
               <Text as="label" size="2" weight="medium" htmlFor="password">Contraseña</Text>
-              <TextField.Root
+              <PasswordInput
                 name="password"
                 id="password"
-                type="password"
                 placeholder="••••••••"
                 required
                 mt="1"
                 size="3"
+                showLeftIcon={false}
               />
             </Box>
 

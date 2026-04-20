@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { LayoutDashboard, Calendar, Users, Settings, LogOut } from 'lucide-react';
 import { Box, Flex, Text, Heading } from '@radix-ui/themes';
+import { authService } from '@/services/auth.service';
 
 export default function SalonLayout({
   children,
@@ -57,6 +58,7 @@ export default function SalonLayout({
             style={{ color: 'var(--violet-5)', background: 'none', border: 'none', cursor: 'pointer' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'var(--violet-1)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'var(--violet-5)')}
+            onClick={() => authService.logout()}
           >
             <LogOut size={16} />
             <Text size="2">Cerrar Sesión</Text>

@@ -15,6 +15,30 @@ export const tenantService = {
     }
   },
 
+  getById: async (id: string): Promise<Tenant> => {
+    try {
+      const response = await api.get(`/tenants/${id}`);
+      return response.data.data;
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Error al obtener los detalles del salón');
+    }
+  },
+
+  getTenantPayments: async (id: string): Promise<any[]> => {
+    try {
+      const response = await api.get(`/tenants/${id}/payments`);
+      return response.data.data || [];
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Error al obtener el historial de pagos');
+    }
+  },
+
   create: async (name: string, customDomain: string): Promise<Tenant> => {
     try {
       const response = await api.post('/tenants', { name, customDomain });

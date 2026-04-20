@@ -18,7 +18,7 @@ export const auditLogService = {
   getAll: async (page = 1, limit = 50): Promise<{ data: AuditLog[], meta: any }> => {
     try {
       const response = await apiClient.get(`/audit-logs?page=${page}&limit=${limit}`);
-      return response.data.data;
+      return response.data;
     } catch (error) {
       console.error('Error fetching audit logs', error);
       return { data: [], meta: {} };

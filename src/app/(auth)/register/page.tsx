@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, Heading, Text, TextField, Flex, Box, Separator, Select } from '@radix-ui/themes';
+import { PasswordInput } from '@/components/forms/PasswordInput';
 import Link from 'next/link';
 import { tenantService } from '@/services/tenant.service';
 import { SubscriptionPlan } from '@/lib/api';
@@ -105,14 +106,14 @@ export default function RegisterPage() {
 
             <Box>
               <Text as="label" size="2" weight="medium" htmlFor="password">Contraseña</Text>
-              <TextField.Root
+              <PasswordInput
                 name="password"
                 id="password"
-                type="password"
                 placeholder="Mínimo 8 caracteres"
                 required
                 mt="1"
                 size="3"
+                showLeftIcon={false}
               />
             </Box>
 

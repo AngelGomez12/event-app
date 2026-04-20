@@ -3,42 +3,68 @@
 import { useEventStore } from '@/store/useEventStore';
 import { useGuestStore } from '@/store/useGuestStore';
 import { useEffect } from 'react';
-import { Card, Heading, Text, Badge, Flex, Box, Separator } from '@radix-ui/themes';
-import { differenceInDays } from 'date-fns';
+import { Card, Heading, Text, Badge, Flex, Box, Separator, Spinner } from '@radix-ui/themes';
+import { differenceInDays, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Users, CheckCircle, XCircle, Sparkles } from 'lucide-react';
+import { EventType } from '@/lib/api';
 
 export default function MiEventoPage() {
-    const { eventos, fetchEventos } = useEventStore();
-    const { invitados, fetchInvitados } = useGuestStore();
+    const { myEvent, fetchMyEvent, isLoading: eventsLoading } = useEventStore();
+    const { invitados, fetchInvitados, isLoading: guestsLoading } = useGuestStore();
 
     useEffect(() => {
-        fetchEventos();
-        fetchInvitados('1');
-    }, [fetchEventos, fetchInvitados]);
+        fetchMyEvent();
+    }, [fetchMyEvent]);
 
-    const myEvent = eventos[0];
+    useEffect(() => {
+        if (myEvent) {
+            fetchInvitados(myEvent.id);
+        }
+    }, [myEvent, fetchInvitados]);
 
-    if (!myEvent) return (
-        <Flex justify="center" py="9"><Text color="gray">Cargando evento...</Text></Flex>
+    if (eventsLoading) return (
+        <Flex justify="center" align="center" style={{ minHeight: '60vh' }}>
+            <Flex direction="column" align="center" gap="3">
+                <Spinner size="3" />
+                <Text color="gray">Cargando tu evento...</Text>
+            </Flex>
+        </Flex>
     );
 
-    const daysLeft = differenceInDays(new Date(myEvent.fecha), new Date());
-    const totalInvitados = invitados.length;
-    const confirmados = invitados.filter(i => i.estado === 'confirmado').length;
-    const pendientes = invitados.filter(i => i.estado === 'pendiente').length;
+    if (!myEvent) return (
+        <Flex justify="center" py="9" direction="column" align="center" gap="4">
+            <Text size="4">📋</Text>
+            <Text color="gray" size="2">No tienes un evento asignado para esta cuenta.</Text>
+            <Text color="gray" size="1">Contacta con el salón si crees que esto es un error.</Text>
+        </Flex>
+    );
+
+    const daysLeft = differenceInDays(new Date(myEvent.date), new Date());
+    const totalInvitados = Array.isArray(invitados) ? invitados.length : 0;
+    const confirmados = Array.isArray(invitados) ? invitados.filter(i => i.estado === 'confirmado').length : 0;
+    const pendientes = Array.isArray(invitados) ? invitados.filter(i => i.estado === 'pendiente').length : 0;
 
     return (
         <Flex direction="column" gap="8">
             {/* Hero */}
             <Flex direction="column" align="center" gap="2" py="4">
                 <Badge color="violet" variant="soft" size="2" radius="full">
-                    {myEvent.tipo === 'boda' ? '💍 Gran Boda' : '🎉 Fiesta de 15'}
+                    {myEvent.type === EventType.WEDDING ? '💍 Gran Boda' : 
+                     myEvent.type === EventType.SWEET_15 ? '🎉 Fiesta de 15' : '🎈 Evento Especial'}
                 </Badge>
                 <Heading size="9" weight="bold" align="center" style={{ letterSpacing: '-0.02em' }}>
-                    {myEvent.nombre_agasajado}
+                    {myEvent.honoreeName}
                 </Heading>
                 <Text size="4" color="gray" align="center">
-                    Faltan <Text as="span" weight="bold" style={{ color: 'var(--violet-11)' }}>{daysLeft} días</Text> para la gran noche · {myEvent.fecha}
+                    {daysLeft > 0 ? (
+                        <>Faltan <Text as="span" weight="bold" style={{ color: 'var(--violet-11)' }}>{daysLeft} días</Text> para la gran noche · </>
+                    ) : daysLeft === 0 ? (
+                        <Text as="span" weight="bold" color="green">¡Es hoy! </Text>
+                    ) : (
+                        <Text as="span" weight="bold">Celebrado el </Text>
+                    )}
+                    {format(new Date(myEvent.date), "d 'de' MMMM", { locale: es })}
                 </Text>
             </Flex>
 

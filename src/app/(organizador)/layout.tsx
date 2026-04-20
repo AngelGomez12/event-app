@@ -1,6 +1,9 @@
+'use client';
+
 import Link from 'next/link';
 import { Home, Users, Utensils, CreditCard, LogOut } from 'lucide-react';
 import { Flex, Text } from '@radix-ui/themes';
+import { authService } from '@/services/auth.service';
 
 export default function OrganizerLayout({
   children,
@@ -36,8 +39,11 @@ export default function OrganizerLayout({
             </Link>
           </Flex>
 
-          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gray-9)' }}
-            className="hover:text-red-500 transition-colors">
+          <button 
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gray-9)' }}
+            className="hover:text-red-500 transition-colors"
+            onClick={() => authService.logout()}
+          >
             <LogOut size={18} />
           </button>
         </Flex>

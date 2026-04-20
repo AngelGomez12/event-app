@@ -96,6 +96,7 @@ export interface Event {
   status: EventStatus;
   approximateGuestCount: number;
   basePrice: number;
+  maxTableCount: number;
   tenantId: string;
   organizerId: string;
   payments?: EventPayment[];
@@ -108,6 +109,7 @@ export interface CreateEventDto {
   type: EventType;
   date: string;
   approximateGuestCount: number;
+  maxTableCount?: number;
   organizerId: string;
 }
 

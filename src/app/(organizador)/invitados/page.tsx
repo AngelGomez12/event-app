@@ -1,14 +1,16 @@
 'use client';
 
+import { useEventStore } from '@/store/useEventStore';
 import { useGuestStore } from '@/store/useGuestStore';
 import { useEffect, useState } from 'react';
 import {
     Button, Card, Heading, Text, Badge, Table,
-    Dialog, TextField, Flex, Box, Separator,
+    Dialog, TextField, Flex, Box, Separator, Spinner
 } from '@radix-ui/themes';
 import { Plus, Link as LinkIcon, Check, X } from 'lucide-react';
 
 export default function InvitadosPage() {
+    const { myEvent, fetchMyEvent } = useEventStore();
     const { invitados, fetchInvitados, addInvitado, updateEstadoInvitado, isLoading } = useGuestStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -17,12 +19,19 @@ export default function InvitadosPage() {
     const [restriccion, setRestriccion] = useState('');
 
     useEffect(() => {
-        fetchInvitados('1');
-    }, [fetchInvitados]);
+        fetchMyEvent();
+    }, [fetchMyEvent]);
+
+    useEffect(() => {
+        if (myEvent) {
+            fetchInvitados(myEvent.id);
+        }
+    }, [myEvent, fetchInvitados]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await addInvitado({ nombre, telefono, restriccionAlimentaria: restriccion, estado: 'pendiente' });
+        if (!myEvent) return;
+        await addInvitado(myEvent.id, { nombre, telefono, restriccionAlimentaria: restriccion, estado: 'pendiente' });
         setIsModalOpen(false);
         setNombre('');
         setTelefono('');
@@ -95,8 +104,13 @@ export default function InvitadosPage() {
                 <Heading size="4" mb="4">Gestionar Asistencia</Heading>
                 <Separator size="4" mb="4" />
                 {isLoading ? (
-                    <Flex justify="center" py="6"><Text color="gray" size="2">Cargando invitados...</Text></Flex>
-                ) : invitados.length === 0 ? (
+                    <Flex justify="center" py="6">
+                        <Flex direction="column" align="center" gap="2">
+                            <Spinner size="3" />
+                            <Text color="gray" size="2">Cargando invitados...</Text>
+                        </Flex>
+                    </Flex>
+                ) : (!Array.isArray(invitados) || invitados.length === 0) ? (
                     <Flex justify="center" py="8" direction="column" align="center" gap="2">
                         <Text size="4">👥</Text>
                         <Text color="gray" size="2">No hay invitados aún. ¡Agregá el primero!</Text>

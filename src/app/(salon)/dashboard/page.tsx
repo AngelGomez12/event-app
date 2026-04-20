@@ -190,7 +190,7 @@ export default function Dashboard() {
             <Heading size="4" mb="4">Actividad Reciente</Heading>
             <Separator size="4" mb="4" />
             <Flex direction="column" gap="3">
-              {myLogs.length > 0 ? (
+              {Array.isArray(myLogs) && myLogs.length > 0 ? (
                 myLogs.map((log) => (
                   <Box key={log.id}>
                     <Flex justify="between" align="center" mb="1">

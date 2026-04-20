@@ -5,6 +5,7 @@ import { Heading, Text, Badge, Table, Flex, Card, Button, DropdownMenu, Grid } f
 import { MoreHorizontal, Users, DollarSign, AlertCircle, Ban, Eye } from 'lucide-react';
 import { CreateTenantModal } from './CreateTenantModal';
 import { EditTenantLimitsModal } from './EditTenantLimitsModal';
+import { ViewTenantDetailsModal } from './ViewTenantDetailsModal';
 import { useTenantStore } from '@/store/useTenantStore';
 import { authService } from '@/services/auth.service';
 
@@ -118,6 +119,16 @@ export default function SuperAdminDashboard() {
                         </Button>
                       </DropdownMenu.Trigger>
                       <DropdownMenu.Content>
+                        <ViewTenantDetailsModal 
+                          tenantId={tenant.id} 
+                          trigger={
+                            <DropdownMenu.Item onSelect={(e) => e.preventDefault()}>
+                              <Flex align="center" gap="2">
+                                <Eye size={14} /> Ver Detalles
+                              </Flex>
+                            </DropdownMenu.Item>
+                          }
+                        />
                         <DropdownMenu.Item 
                           onClick={() => authService.impersonate(tenant.id)}
                         >

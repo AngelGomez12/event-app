@@ -4,11 +4,13 @@ import { Event, CreateEventDto, EventStatus } from '@/lib/api';
 
 interface EventState {
   eventos: Event[];
+  myEvent: Event | null;
   isLoading: boolean;
   error: string | null;
 
   // Acciones
   fetchEventos: () => Promise<void>;
+  fetchMyEvent: () => Promise<void>;
   addEvento: (nuevoEvento: CreateEventDto) => Promise<void>;
   updateEstadoEvento: (id: string, status: EventStatus) => Promise<void>;
   fetchEventoById: (id: string) => Promise<Event>;
@@ -19,6 +21,7 @@ interface EventState {
 
 export const useEventStore = create<EventState>((set) => ({
   eventos: [],
+  myEvent: null,
   isLoading: false,
   error: null,
 
@@ -29,6 +32,16 @@ export const useEventStore = create<EventState>((set) => ({
       set({ eventos: data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message || 'Error al cargar los eventos', isLoading: false });
+    }
+  },
+
+  fetchMyEvent: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const data = await eventService.getAll();
+      set({ myEvent: data.length > 0 ? data[0] : null, isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message || 'Error al cargar tu evento', isLoading: false });
     }
   },
 

@@ -62,6 +62,18 @@ export const eventService = {
     }
   },
 
+  updateTableLimit: async (id: string, maxTableCount: number): Promise<Event> => {
+    try {
+      const response = await apiClient.patch(`/events/${id}/table-limit`, { maxTableCount });
+      return response.data.data;
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Error al actualizar el límite de mesas');
+    }
+  },
+
   addPayment: async (id: string, paymentData: any): Promise<any> => {
     try {
       const response = await apiClient.post(`/events/${id}/payments`, paymentData);

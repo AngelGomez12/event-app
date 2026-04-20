@@ -16,8 +16,9 @@ import {
     Box,
     Separator,
 } from '@radix-ui/themes';
-import { Plus, CalendarDays, Hash, Users as UsersIcon } from 'lucide-react';
-import { EventStatus, EventType, User } from '@/lib/api';
+import { Plus, CalendarDays, Hash, Users as UsersIcon, UserPlus, UserCheck, Key, Mail, User as UserIcon } from 'lucide-react';
+import { PasswordInput } from '@/components/forms/PasswordInput';
+import { EventStatus, EventType, Role, User } from '@/lib/api';
 import { userService } from '@/services/user.service';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -27,12 +28,18 @@ export default function EventosPage() {
     const { eventos, fetchEventos, addEvento, isLoading } = useEventStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
+    const [createMode, setCreateMode] = useState<'existing' | 'new'>('existing');
 
     const [honoreeName, setHonoreeName] = useState('');
     const [fecha, setFecha] = useState('');
     const [tipo, setTipo] = useState<EventType>(EventType.SWEET_15);
     const [guestCount, setGuestCount] = useState(100);
     const [organizerId, setOrganizerId] = useState('');
+
+    // Datos del Nuevo Usuario (si aplica)
+    const [newUserName, setNewUserName] = useState('');
+    const [newUserEmail, setNewUserEmail] = useState('');
+    const [newUserPassword, setNewUserPassword] = useState('');
 
     useEffect(() => {
         fetchEventos();
@@ -51,22 +58,45 @@ export default function EventosPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            let finalOrganizerId = organizerId;
+
+            // Si el modo es "new", primero creamos al usuario
+            if (createMode === 'new') {
+                const newUser = await userService.create({
+                    fullName: newUserName,
+                    email: newUserEmail,
+                    password: newUserPassword,
+                    role: Role.ORGANIZADOR
+                });
+                finalOrganizerId = newUser.id;
+            }
+
             await addEvento({
                 honoreeName,
                 date: new Date(fecha).toISOString(),
                 type: tipo,
                 approximateGuestCount: Number(guestCount),
-                organizerId,
+                organizerId: finalOrganizerId,
             });
+
             setIsModalOpen(false);
-            setHonoreeName('');
-            setFecha('');
-            setTipo(EventType.BIRTHDAY_15);
-            setGuestCount(100);
-        } catch (error) {
-            console.error('Failed to create event', error);
+            resetForm();
+        } catch (error: any) {
+            alert(error.message || 'Error al procesar la solicitud');
         }
     };
+
+    const resetForm = () => {
+        setHonoreeName('');
+        setFecha('');
+        setTipo(EventType.SWEET_15);
+        setGuestCount(100);
+        setNewUserName('');
+        setNewUserEmail('');
+        setNewUserPassword('');
+        setCreateMode('existing');
+    };
+
 
     return (
         <Flex direction="column" gap="6">
@@ -80,6 +110,7 @@ export default function EventosPage() {
                 <Dialog.Root open={isModalOpen} onOpenChange={(open) => {
                     setIsModalOpen(open);
                     if (open) fetchUsers();
+                    else resetForm();
                 }}>
                     <Dialog.Trigger>
                         <Button size="3" color="violet">
@@ -88,84 +119,40 @@ export default function EventosPage() {
                         </Button>
                     </Dialog.Trigger>
 
-                    <Dialog.Content style={{ maxWidth: 460 }} size="4">
+                    <Dialog.Content style={{ maxWidth: 500 }} size="4">
                         <Dialog.Title>Crear Nuevo Evento</Dialog.Title>
                         <Dialog.Description size="2" color="gray" mb="4">
-                            Completá los datos del nuevo evento para registrarlo.
+                            Registrá el evento y asignale un organizador para que pueda gestionarlo.
                         </Dialog.Description>
-
-                        <Separator size="4" mb="4" />
 
                         <form onSubmit={handleSubmit}>
                             <Flex direction="column" gap="4">
+                                <Heading size="3">Datos del Evento</Heading>
                                 <Box>
-                                    <Text as="label" size="2" weight="medium" htmlFor="nombre">
-                                        Nombre Agasajado/s
-                                    </Text>
-                                    <TextField.Root
-                                        id="nombre"
-                                        placeholder="Ej: Martina, Juan y Ana"
-                                        value={honoreeName}
-                                        onChange={(e) => setHonoreeName(e.target.value)}
-                                        required
-                                        mt="1"
-                                        size="3"
-                                    >
-                                        <TextField.Slot>
-                                            <Hash size={14} />
-                                        </TextField.Slot>
+                                    <Text as="label" size="2" weight="medium" htmlFor="nombre">Nombre Agasajado/s</Text>
+                                    <TextField.Root id="nombre" placeholder="Ej: Martina" value={honoreeName} onChange={(e) => setHonoreeName(e.target.value)} required mt="1" size="3">
+                                        <TextField.Slot><Hash size={14} /></TextField.Slot>
                                     </TextField.Root>
                                 </Box>
 
                                 <Flex gap="4">
                                     <Box style={{ flex: 1 }}>
-                                        <Text as="label" size="2" weight="medium" htmlFor="fecha">
-                                            Fecha del Evento
-                                        </Text>
-                                        <TextField.Root
-                                            id="fecha"
-                                            type="datetime-local"
-                                            value={fecha}
-                                            onChange={(e) => setFecha(e.target.value)}
-                                            required
-                                            mt="1"
-                                            size="3"
-                                        >
-                                            <TextField.Slot>
-                                                <CalendarDays size={14} />
-                                            </TextField.Slot>
+                                        <Text as="label" size="2" weight="medium" htmlFor="fecha">Fecha</Text>
+                                        <TextField.Root id="fecha" type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)} required mt="1" size="3">
+                                            <TextField.Slot><CalendarDays size={14} /></TextField.Slot>
                                         </TextField.Root>
                                     </Box>
                                     <Box style={{ width: '120px' }}>
-                                        <Text as="label" size="2" weight="medium" htmlFor="guests">
-                                            Invitados
-                                        </Text>
-                                        <TextField.Root
-                                            id="guests"
-                                            type="number"
-                                            min="1"
-                                            value={guestCount}
-                                            onChange={(e) => setGuestCount(Number(e.target.value))}
-                                            required
-                                            mt="1"
-                                            size="3"
-                                        >
-                                            <TextField.Slot>
-                                                <UsersIcon size={14} />
-                                            </TextField.Slot>
+                                        <Text as="label" size="2" weight="medium" htmlFor="guests">Invitados</Text>
+                                        <TextField.Root id="guests" type="number" value={guestCount} onChange={(e) => setGuestCount(Number(e.target.value))} required mt="1" size="3">
+                                            <TextField.Slot><UsersIcon size={14} /></TextField.Slot>
                                         </TextField.Root>
                                     </Box>
                                 </Flex>
 
                                 <Box>
-                                    <Text as="div" size="2" weight="medium" mb="1">
-                                        Tipo de Evento
-                                    </Text>
-                                    <Select.Root
-                                        value={tipo}
-                                        onValueChange={(val: EventType) => setTipo(val)}
-                                        size="3"
-                                    >
+                                    <Text as="div" size="2" weight="medium" mb="1">Tipo de Evento</Text>
+                                    <Select.Root value={tipo} onValueChange={(val: EventType) => setTipo(val)} size="3">
                                         <Select.Trigger style={{ width: '100%' }} />
                                         <Select.Content color="violet">
                                             <Select.Item value={EventType.SWEET_15}>🎉 15 Años</Select.Item>
@@ -176,35 +163,64 @@ export default function EventosPage() {
                                     </Select.Root>
                                 </Box>
 
-                                <Box>
-                                    <Text as="div" size="2" weight="medium" mb="1">
-                                        Organizador Responsable
-                                    </Text>
-                                    <Select.Root
-                                        value={organizerId}
-                                        onValueChange={(val) => setOrganizerId(val)}
-                                        size="3"
-                                        required
-                                    >
-                                        <Select.Trigger style={{ width: '100%' }} placeholder="Seleccionar organizador" />
-                                        <Select.Content color="violet">
-                                            {users.map(u => (
-                                                <Select.Item key={u.id} value={u.id}>{u.fullName}</Select.Item>
-                                            ))}
-                                        </Select.Content>
-                                    </Select.Root>
-                                </Box>
+                                <Separator size="4" my="2" />
+                                
+                                <Flex justify="between" align="center">
+                                    <Heading size="3">Organizador del Evento</Heading>
+                                    <Flex gap="2">
+                                        <Button variant={createMode === 'existing' ? 'solid' : 'soft'} size="1" onClick={() => setCreateMode('existing')} type="button">
+                                            <UserCheck size={14} /> Existente
+                                        </Button>
+                                        <Button variant={createMode === 'new' ? 'solid' : 'soft'} size="1" onClick={() => setCreateMode('new')} type="button">
+                                            <UserPlus size={14} /> Nuevo
+                                        </Button>
+                                    </Flex>
+                                </Flex>
+
+                                {createMode === 'existing' ? (
+                                    <Box>
+                                        <Text as="div" size="2" weight="medium" mb="1">Seleccionar Organizador</Text>
+                                        <Select.Root value={organizerId} onValueChange={(val) => setOrganizerId(val)} size="3" required>
+                                            <Select.Trigger style={{ width: '100%' }} />
+                                            <Select.Content color="violet">
+                                                {users.map(u => <Select.Item key={u.id} value={u.id}>{u.fullName} ({u.role})</Select.Item>)}
+                                            </Select.Content>
+                                        </Select.Root>
+                                    </Box>
+                                ) : (
+                                    <Flex direction="column" gap="3" p="3" style={{ background: 'var(--violet-1)', borderRadius: 'var(--radius-3)', border: '1px solid var(--violet-4)' }}>
+                                        <Box>
+                                            <Text as="label" size="2" weight="medium">Nombre Completo</Text>
+                                            <TextField.Root placeholder="Ej: Juan Perez" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} required mt="1" size="2">
+                                                <TextField.Slot><UserIcon size={14} /></TextField.Slot>
+                                            </TextField.Root>
+                                        </Box>
+                                        <Box>
+                                            <Text as="label" size="2" weight="medium">Email (Login)</Text>
+                                            <TextField.Root type="email" placeholder="juan@email.com" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} required mt="1" size="2">
+                                                <TextField.Slot><Mail size={14} /></TextField.Slot>
+                                            </TextField.Root>
+                                        </Box>
+                                        <Box>
+                                            <Text as="label" size="2" weight="medium">Contraseña Temporal</Text>
+                                            <PasswordInput
+                                                placeholder="Mín. 6 caracteres"
+                                                value={newUserPassword}
+                                                onChange={(e) => setNewUserPassword(e.target.value)}
+                                                required
+                                                mt="1"
+                                                size="2"
+                                            />
+                                        </Box>
+                                    </Flex>
+                                )}
 
                                 <Separator size="4" mt="2" />
 
                                 <Flex gap="3" justify="end">
-                                    <Dialog.Close>
-                                        <Button variant="soft" color="gray" type="button" size="3">
-                                            Cancelar
-                                        </Button>
-                                    </Dialog.Close>
-                                    <Button type="submit" color="violet" size="3">
-                                        Crear Evento
+                                    <Dialog.Close><Button variant="soft" color="gray" type="button" size="3">Cancelar</Button></Dialog.Close>
+                                    <Button type="submit" color="violet" size="3" loading={isLoading}>
+                                        Crear Evento y Usuario
                                     </Button>
                                 </Flex>
                             </Flex>

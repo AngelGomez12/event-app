@@ -1,48 +1,68 @@
 'use client';
 
-import { useState } from 'react';
-import { Button, Card, Heading, Text, Badge, Table, Dialog, TextField, Select, Flex, Box, Separator } from '@radix-ui/themes';
+import { useEffect, useState } from 'react';
+import { Button, Card, Heading, Text, Badge, Table, Dialog, TextField, Select, Flex, Box, Separator, Spinner } from '@radix-ui/themes';
 import { Plus, Trash, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { useEventStore } from '@/store/useEventStore';
+import { useEventMovementStore } from '@/store/useEventMovementStore';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-type TipoMovimiento = 'ingreso' | 'egreso';
-
-interface Movimiento {
-    id: string;
-    concepto: string;
-    monto: number;
-    tipo: TipoMovimiento;
-    fecha: string;
-}
+type TipoMovimiento = 'INCOME' | 'EXPENSE';
 
 export default function PagosPage() {
-    const [movimientos, setMovimientos] = useState<Movimiento[]>([
-        { id: '1', concepto: 'Seña Salón', monto: 50000, tipo: 'egreso', fecha: '2026-02-15' },
-        { id: '2', concepto: 'Ayuda de Papá', monto: 100000, tipo: 'ingreso', fecha: '2026-03-01' },
-    ]);
+    const { myEvent, fetchMyEvent } = useEventStore();
+    const { 
+        movements, totalIncome, totalExpense, balance, 
+        fetchMovements, addMovement, deleteMovement, isLoading 
+    } = useEventMovementStore();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [concepto, setConcepto] = useState('');
     const [monto, setMonto] = useState('');
-    const [tipo, setTipo] = useState<TipoMovimiento>('egreso');
+    const [tipo, setTipo] = useState<TipoMovimiento>('EXPENSE');
 
-    const handleAdd = (e: React.FormEvent) => {
+    useEffect(() => {
+        fetchMyEvent();
+    }, [fetchMyEvent]);
+
+    useEffect(() => {
+        if (myEvent) {
+            fetchMovements(myEvent.id);
+        }
+    }, [myEvent, fetchMovements]);
+
+    const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
-        setMovimientos([...movimientos, {
-            id: Math.random().toString(),
-            concepto,
-            monto: Number(monto),
-            tipo,
-            fecha: new Date().toISOString().split('T')[0],
-        }]);
-        setIsModalOpen(false);
-        setConcepto('');
-        setMonto('');
+        if (!myEvent) return;
+
+        try {
+            await addMovement(myEvent.id, {
+                concept: concepto,
+                amount: Number(monto),
+                type: tipo,
+                date: new Date().toISOString(),
+            });
+            setIsModalOpen(false);
+            setConcepto('');
+            setMonto('');
+        } catch (error) {
+            console.error('Error adding movement:', error);
+        }
     };
 
-    const handleDelete = (id: string) => setMovimientos(movimientos.filter(m => m.id !== id));
+    const handleDelete = async (id: string) => {
+        if (!myEvent) return;
+        await deleteMovement(myEvent.id, id);
+    };
 
-    const totalIngresos = movimientos.filter(m => m.tipo === 'ingreso').reduce((s, m) => s + m.monto, 0);
-    const totalEgresos = movimientos.filter(m => m.tipo === 'egreso').reduce((s, m) => s + m.monto, 0);
-    const balance = totalIngresos - totalEgresos;
+    if (!myEvent) {
+        return (
+            <Flex justify="center" align="center" style={{ minHeight: '50vh' }}>
+                <Spinner size="3" />
+            </Flex>
+        );
+    }
 
     return (
         <Flex direction="column" gap="6">
@@ -77,8 +97,8 @@ export default function PagosPage() {
                                     <Select.Root value={tipo} onValueChange={(v: TipoMovimiento) => setTipo(v)} size="3">
                                         <Select.Trigger style={{ width: '100%' }} />
                                         <Select.Content color="violet">
-                                            <Select.Item value="egreso">💸 Gasto (Egreso)</Select.Item>
-                                            <Select.Item value="ingreso">💰 Ingreso / Ahorro</Select.Item>
+                                            <Select.Item value="EXPENSE">💸 Gasto (Egreso)</Select.Item>
+                                            <Select.Item value="INCOME">💰 Ingreso / Ahorro</Select.Item>
                                         </Select.Content>
                                     </Select.Root>
                                 </Box>
@@ -87,7 +107,7 @@ export default function PagosPage() {
                                     <Dialog.Close>
                                         <Button variant="soft" color="gray" type="button" size="3">Cancelar</Button>
                                     </Dialog.Close>
-                                    <Button type="submit" color="violet" size="3">Guardar</Button>
+                                    <Button type="submit" color="violet" size="3" loading={isLoading}>Guardar</Button>
                                 </Flex>
                             </Flex>
                         </form>
@@ -102,7 +122,7 @@ export default function PagosPage() {
                         <Text size="2" weight="medium" style={{ color: 'var(--green-11)' }}>Ingresos Totales</Text>
                         <TrendingUp size={18} style={{ color: 'var(--green-9)' }} />
                     </Flex>
-                    <Heading size="7" weight="bold" style={{ color: 'var(--green-11)' }}>${totalIngresos.toLocaleString()}</Heading>
+                    <Heading size="7" weight="bold" style={{ color: 'var(--green-11)' }}>${totalIncome.toLocaleString()}</Heading>
                 </Card>
 
                 <Card size="3" style={{ border: '1px solid var(--red-5)', background: 'var(--red-1)' }}>
@@ -110,7 +130,7 @@ export default function PagosPage() {
                         <Text size="2" weight="medium" style={{ color: 'var(--red-11)' }}>Gastos Totales</Text>
                         <TrendingDown size={18} style={{ color: 'var(--red-9)' }} />
                     </Flex>
-                    <Heading size="7" weight="bold" style={{ color: 'var(--red-11)' }}>${totalEgresos.toLocaleString()}</Heading>
+                    <Heading size="7" weight="bold" style={{ color: 'var(--red-11)' }}>${totalExpense.toLocaleString()}</Heading>
                 </Card>
 
                 <Card size="3" style={{
@@ -142,27 +162,38 @@ export default function PagosPage() {
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
-                        {movimientos.map((mov) => (
+                        {movements.map((mov) => (
                             <Table.Row key={mov.id} align="center">
-                                <Table.Cell><Text size="2" color="gray">{mov.fecha}</Text></Table.Cell>
-                                <Table.Cell><Text size="2" weight="medium">{mov.concepto}</Text></Table.Cell>
                                 <Table.Cell>
-                                    <Badge color={mov.tipo === 'ingreso' ? 'green' : 'red'} variant="soft" radius="full">
-                                        {mov.tipo.toUpperCase()}
+                                    <Text size="2" color="gray">
+                                        {format(new Date(mov.date), 'dd MMM yyyy', { locale: es })}
+                                    </Text>
+                                </Table.Cell>
+                                <Table.Cell><Text size="2" weight="medium">{mov.concept}</Text></Table.Cell>
+                                <Table.Cell>
+                                    <Badge color={mov.type === 'INCOME' ? 'green' : 'red'} variant="soft" radius="full">
+                                        {mov.type === 'INCOME' ? 'INGRESO' : 'EGRESO'}
                                     </Badge>
                                 </Table.Cell>
                                 <Table.Cell justify="end">
-                                    <Text size="2" weight="bold" style={{ color: mov.tipo === 'ingreso' ? 'var(--green-11)' : 'var(--red-11)' }}>
-                                        {mov.tipo === 'ingreso' ? '+' : '-'}${mov.monto.toLocaleString()}
+                                    <Text size="2" weight="bold" style={{ color: mov.type === 'INCOME' ? 'var(--green-11)' : 'var(--red-11)' }}>
+                                        {mov.type === 'INCOME' ? '+' : '-'}${Number(mov.amount).toLocaleString()}
                                     </Text>
                                 </Table.Cell>
                                 <Table.Cell>
-                                    <Button variant="ghost" size="1" color="red" onClick={() => handleDelete(mov.id)}>
+                                    <Button variant="ghost" size="1" color="red" onClick={() => handleDelete(mov.id)} loading={isLoading}>
                                         <Trash size={14} />
                                     </Button>
                                 </Table.Cell>
                             </Table.Row>
                         ))}
+                        {movements.length === 0 && !isLoading && (
+                            <Table.Row>
+                                <Table.Cell colSpan={5} align="center">
+                                    <Text size="2" color="gray" py="4">No hay movimientos registrados.</Text>
+                                </Table.Cell>
+                            </Table.Row>
+                        )}
                     </Table.Body>
                 </Table.Root>
             </Card>

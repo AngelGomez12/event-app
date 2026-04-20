@@ -20,48 +20,47 @@ interface GuestState {
   mesas: Mesa[];
   isLoading: boolean;
   error: string | null;
+  currentEventId: string | null;
   
-  fetchInvitados: (eventoId: string) => Promise<void>;
-  addInvitado: (invitado: Omit<Invitado, 'id'>) => Promise<void>;
+  fetchInvitados: (eventoId: string, search?: string) => Promise<void>;
+  fetchMesas: (eventoId: string) => Promise<void>;
+  addInvitado: (eventoId: string, invitado: Omit<Invitado, 'id'>) => Promise<void>;
   updateEstadoInvitado: (id: string, nuevoEstado: Invitado['estado']) => Promise<void>;
   assignMesa: (id: string, mesaId: string) => Promise<void>;
-  addMesa: (nombre: string) => void;
+  addMesa: (eventoId: string, nombre: string) => Promise<void>;
 }
 
-export const useGuestStore = create<GuestState>((set) => ({
+export const useGuestStore = create<GuestState>((set, get) => ({
   invitados: [],
-  mesas: [
-      { id: '1', nombre: 'Mesa Principal' },
-      { id: '2', nombre: 'Familia Novia' }
-  ],
+  mesas: [],
   isLoading: false,
   error: null,
+  currentEventId: null,
 
-  fetchInvitados: async (eventoId) => {
-    set({ isLoading: true, error: null });
+  fetchInvitados: async (eventoId, search) => {
+    set({ isLoading: true, error: null, currentEventId: eventoId });
     try {
-      // Usar servicio real:
-      // const data = await guestService.getInvitados(eventoId);
-      // set({ invitados: data, isLoading: false });
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Fake data
-      const fakeGuests: Invitado[] = [
-        { id: '1', nombre: 'Juan Perez', telefono: '12345678', estado: 'confirmado', restriccionAlimentaria: 'Sin gluten' },
-        { id: '2', nombre: 'Maria Gomez', telefono: '87654321', estado: 'pendiente' }
-      ];
-      set({ invitados: fakeGuests, isLoading: false }); 
+      const data = await guestService.getInvitados(eventoId, search);
+      set({ invitados: data, isLoading: false });
     } catch (error) {
       set({ error: 'Error al cargar invitados', isLoading: false });
     }
   },
 
-  addInvitado: async (invitado) => {
+  fetchMesas: async (eventoId) => {
+    set({ isLoading: true, error: null, currentEventId: eventoId });
+    try {
+      const data = await guestService.getMesas(eventoId);
+      set({ mesas: data, isLoading: false });
+    } catch (error) {
+      set({ error: 'Error al cargar mesas', isLoading: false });
+    }
+  },
+
+  addInvitado: async (eventoId, invitado) => {
       set({ isLoading: true, error: null });
       try {
-          // const nuevoInvitado = await guestService.addInvitado(invitado);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const nuevoInvitado = { ...invitado, id: Math.random().toString() };
+          const nuevoInvitado = await guestService.addInvitado(eventoId, invitado);
           set((state) => ({
               invitados: [...state.invitados, nuevoInvitado],
               isLoading: false
@@ -72,11 +71,14 @@ export const useGuestStore = create<GuestState>((set) => ({
   },
 
   updateEstadoInvitado: async (id, nuevoEstado) => {
+    const { currentEventId } = get();
+    if (!currentEventId) {
+      set({ error: 'No se pudo identificar el evento' });
+      return;
+    }
+    
     try {
-      // Usar servicio real:
-      // await guestService.updateEstado(id, nuevoEstado);
-      
-      // Actualización optimista en el estado local:
+      await guestService.updateEstado(currentEventId, id, nuevoEstado);
       set((state) => ({
         invitados: state.invitados.map(inv => 
           inv.id === id ? { ...inv, estado: nuevoEstado } : inv
@@ -88,9 +90,14 @@ export const useGuestStore = create<GuestState>((set) => ({
   },
 
   assignMesa: async (id, mesaId) => {
+      const { currentEventId } = get();
+      if (!currentEventId) {
+        set({ error: 'No se pudo identificar el evento' });
+        return;
+      }
+
       try {
-          // Usar servicio real:
-          // await guestService.assignMesa(id, mesaId === 'none' ? undefined : mesaId);
+          await guestService.assignMesa(currentEventId, id, mesaId === 'none' ? undefined : mesaId);
           set((state) => ({
               invitados: state.invitados.map(inv =>
                   inv.id === id ? { ...inv, mesaId: mesaId === 'none' ? undefined : mesaId } : inv
@@ -101,10 +108,14 @@ export const useGuestStore = create<GuestState>((set) => ({
       }
   },
 
-  addMesa: (nombre: string) => {
-      // Opcional: const nuevaMesa = await guestService.addMesa({ nombre });
-      set((state) => ({
-          mesas: [...state.mesas, { id: Math.random().toString(), nombre }]
-      }));
+  addMesa: async (eventoId, nombre) => {
+      try {
+          const nuevaMesa = await guestService.addMesa(eventoId, { nombre });
+          set((state) => ({
+              mesas: [...state.mesas, nuevaMesa]
+          }));
+      } catch (error) {
+          set({ error: 'Error al agregar mesa' });
+      }
   }
 }));
