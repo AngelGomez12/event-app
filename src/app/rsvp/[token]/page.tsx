@@ -221,7 +221,7 @@ export default function RsvpPage() {
               </Text>
             </Flex>
           ) : (
-            <Flex direction="column" gap="3" w="100%" mt="4">
+            <Flex direction="column" gap="3" width="100%" mt="4">
               {error && (
                 <Box className="bg-red-50 text-red-600 text-sm p-3 rounded-md mb-2 text-center">
                   {error}

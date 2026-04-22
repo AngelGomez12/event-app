@@ -74,7 +74,8 @@ export const guestService = {
       // Solo enviamos los campos opcionales si tienen valor para evitar errores de validación (400)
       if (invitado.email) payload.email = invitado.email;
       if (invitado.telefono) payload.phone = invitado.telefono;
-      if (invitado.restriccionAlimentaria) payload.dietaryRestrictions = invitado.restriccionAlimentaria;
+      if (invitado.restriccionAlimentaria)
+        payload.dietaryRestrictions = invitado.restriccionAlimentaria;
 
       const response = await apiClient.post(
         `/events/${eventoId}/guests`,
@@ -89,10 +90,9 @@ export const guestService = {
         telefono: g.phone || invitado.telefono,
         restriccionAlimentaria:
           g.dietaryRestrictions || invitado.restriccionAlimentaria,
-        estado:
-          statusMap.toFront[
-            g.attendanceStatus as keyof typeof statusMap.toFront
-          ] || invitado.estado,
+        estado: (statusMap.toFront[
+          g.attendanceStatus as keyof typeof statusMap.toFront
+        ] || "pendiente") as Invitado["estado"],
         mesaId: g.tableId || undefined,
       };
     } catch (error: any) {
@@ -143,23 +143,28 @@ export const guestService = {
     try {
       // Por ahora usamos GET para obtener la info del invitado (incluyendo mesa)
       // ya que el campo 'attendanceConfirmed' no existe en el backend actual.
-      const response = await apiClient.get(`/events/${eventoId}/guests/${invitadoId}`);
+      const response = await apiClient.get(
+        `/events/${eventoId}/guests/${invitadoId}`,
+      );
       const g = response.data;
-      
+
       return {
         id: g.id,
         nombre: g.fullName || "Sin nombre",
         email: g.email || "",
         telefono: g.phone || "",
         restriccionAlimentaria: g.dietaryRestrictions || "",
-        estado: "confirmado",
+        estado: (statusMap.toFront[
+          g.attendanceStatus as keyof typeof statusMap.toFront
+        ] || "pendiente") as Invitado["estado"],
         asistio: true, // Lo marcamos localmente para la UI
         mesaId: g.tableId || undefined,
       };
     } catch (error: any) {
       console.error("Error in checkIn:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener información del invitado",
+        error.response?.data?.message ||
+          "Error al obtener información del invitado",
       );
     }
   },

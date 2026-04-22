@@ -111,7 +111,7 @@ export default function EventoDetallePage() {
   const paymentColumns = [
     {
       header: "Metodo",
-      accessor: (p: Event["payments"][number]) => (
+      accessor: (p: Exclude<Event["payments"], undefined>[number]) => (
         <Badge color="blue" variant="soft">
           {p.method}
         </Badge>
@@ -119,7 +119,7 @@ export default function EventoDetallePage() {
     },
     {
       header: "Monto",
-      accessor: (p: Event["payments"][number]) => (
+      accessor: (p: Exclude<Event["payments"], undefined>[number]) => (
         <Text size="2" weight="bold">
           ${Number(p.amount).toLocaleString()}
         </Text>
@@ -127,7 +127,7 @@ export default function EventoDetallePage() {
     },
     {
       header: "Fecha / Referencia",
-      accessor: (p: Event["payments"][number]) => (
+      accessor: (p: Exclude<Event["payments"], undefined>[number]) => (
         <Text size="1" color="gray">
           {format(new Date(p.paymentDate), "dd/MM/yyyy")}{" "}
           {p.referenceNumber ? `· Ref: ${p.referenceNumber}` : ""}
@@ -136,8 +136,8 @@ export default function EventoDetallePage() {
     },
     {
       header: "Acciones",
-      align: "right" as const,
-      accessor: (p: Event["payments"][number]) => (
+      align: "end" as const,
+      accessor: (p: Exclude<Event["payments"], undefined>[number]) => (
         <Button
           variant="ghost"
           color="red"
@@ -243,7 +243,7 @@ export default function EventoDetallePage() {
               <Scan size={16} /> Check-in Puerta
             </Link>
           </Button>
-          <Button variant="soft" color="slate">
+          <Button variant="soft" color="gray">
             <Edit3 size={16} /> Editar Estado
           </Button>
         </Flex>
@@ -257,10 +257,9 @@ export default function EventoDetallePage() {
             </Heading>
             <Grid columns="2" gap="4">
               <Box>
-                <Flex align="center" gap="2" color="gray" mb="1">
-                  <Calendar size={14} />{" "}
-                  <Text size="1" weight="bold">
-                    Fecha y Hora
+                <Flex align="center" gap="2" mb="1">
+                  <Text size="1" weight="bold" color="gray">
+                    <Calendar size={14} /> Fecha y Hora
                   </Text>
                 </Flex>
                 <Text size="3">
@@ -268,18 +267,18 @@ export default function EventoDetallePage() {
                 </Text>
               </Box>
               <Box>
-                <Flex align="center" gap="2" color="gray" mb="1">
+                <Flex align="center" gap="2" mb="1">
                   <Users size={14} />{" "}
-                  <Text size="1" weight="bold">
+                  <Text size="1" weight="bold" color="gray">
                     Invitados (Aprox)
                   </Text>
                 </Flex>
                 <Text size="3">{evento.approximateGuestCount} personas</Text>
               </Box>
               <Box>
-                <Flex align="center" gap="2" color="gray" mb="1">
+                <Flex align="center" gap="2" mb="1">
                   <Users size={14} />{" "}
-                  <Text size="1" weight="bold">
+                  <Text size="1" weight="bold" color="gray">
                     Límite de Mesas
                   </Text>
                 </Flex>
@@ -297,9 +296,9 @@ export default function EventoDetallePage() {
                 </Flex>
               </Box>
               <Box>
-                <Flex align="center" gap="2" color="gray" mb="1">
+                <Flex align="center" gap="2" mb="1">
                   <Hash size={14} />{" "}
-                  <Text size="1" weight="bold">
+                  <Text size="1" weight="bold" color="gray">
                     ID del Evento
                   </Text>
                 </Flex>
@@ -308,9 +307,9 @@ export default function EventoDetallePage() {
                 </Text>
               </Box>
               <Box>
-                <Flex align="center" gap="2" color="gray" mb="1">
+                <Flex align="center" gap="2" mb="1">
                   <User size={14} />{" "}
-                  <Text size="1" weight="bold">
+                  <Text size="1" weight="bold" color="gray">
                     Organizador
                   </Text>
                 </Flex>

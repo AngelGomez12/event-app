@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { tenantService } from '@/services/tenant.service';
-import { Tenant, PaginationMeta } from '@/lib/api';
+import { create } from "zustand";
+import { tenantService } from "@/services/tenant.service";
+import { Tenant, PaginationMeta } from "@/lib/api";
 
 export interface TenantStats {
   totalTenants: number;
@@ -20,7 +20,11 @@ interface TenantState {
   pagination: PaginationMeta;
 
   // Acciones
-  fetchTenants: (page?: number, limit?: number, search?: string) => Promise<void>;
+  fetchTenants: (
+    page?: number,
+    limit?: number,
+    search?: string,
+  ) => Promise<void>;
   fetchCurrentTenant: () => Promise<void>;
   fetchStats: () => Promise<void>;
   addTenant: (name: string, customDomain: string) => Promise<void>;
@@ -39,23 +43,24 @@ export const useTenantStore = create<TenantState>((set, get) => ({
     total: 0,
     page: 1,
     limit: 10,
-    totalPages: 0
+    totalPages: 0,
   },
 
   fetchTenants: async (page, limit, search) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await tenantService.getAll(
-        {page, limit, search}
-      );
-      set({ 
-        tenants: response.data, 
+      const response = await tenantService.getAll({ page, limit, search });
+      set({
+        tenants: response.data,
         pagination: response.meta,
-        isLoading: false 
+        isLoading: false,
       });
     } catch (error: unknown) {
       const err = error as Error;
-      set({ error: err.message || 'Error al cargar los salones', isLoading: false });
+      set({
+        error: err.message || "Error al cargar los salones",
+        isLoading: false,
+      });
     }
   },
 
@@ -64,7 +69,7 @@ export const useTenantStore = create<TenantState>((set, get) => ({
       const stats = await tenantService.getStats();
       set({ stats });
     } catch (error: unknown) {
-      console.error('Error al cargar estadísticas', error);
+      console.error("Error al cargar estadísticas", error);
     }
   },
 
@@ -75,7 +80,10 @@ export const useTenantStore = create<TenantState>((set, get) => ({
       set({ currentTenant: tenant, isLoading: false });
     } catch (error: unknown) {
       const err = error as Error;
-      set({ error: err.message || 'Error al obtener mi salón', isLoading: false });
+      set({
+        error: err.message || "Error al obtener mi salón",
+        isLoading: false,
+      });
     }
   },
 
@@ -89,7 +97,10 @@ export const useTenantStore = create<TenantState>((set, get) => ({
       }));
     } catch (error: unknown) {
       const err = error as Error;
-      set({ error: err.message || 'Error al crear el Salón', isLoading: false });
+      set({
+        error: err.message || "Error al crear el Salón",
+        isLoading: false,
+      });
       throw error;
     }
   },
@@ -99,12 +110,15 @@ export const useTenantStore = create<TenantState>((set, get) => ({
     try {
       const updatedTenant = await tenantService.updateStatus(id, status);
       set((state) => ({
-        tenants: state.tenants.map(t => t.id === id ? updatedTenant : t),
+        tenants: state.tenants.map((t) => (t.id === id ? updatedTenant : t)),
         isLoading: false,
       }));
     } catch (error: unknown) {
       const err = error as Error;
-      set({ error: err.message || 'Error al actualizar estado', isLoading: false });
+      set({
+        error: err.message || "Error al actualizar estado",
+        isLoading: false,
+      });
       throw error;
     }
   },
@@ -114,12 +128,15 @@ export const useTenantStore = create<TenantState>((set, get) => ({
     try {
       const updatedTenant = await tenantService.update(id, data);
       set((state) => ({
-        tenants: state.tenants.map(t => t.id === id ? updatedTenant : t),
+        tenants: state.tenants.map((t) => (t.id === id ? updatedTenant : t)),
         isLoading: false,
       }));
     } catch (error: unknown) {
       const err = error as Error;
-      set({ error: err.message || 'Error al actualizar salón', isLoading: false });
+      set({
+        error: err.message || "Error al actualizar salón",
+        isLoading: false,
+      });
       throw error;
     }
   },
@@ -131,8 +148,11 @@ export const useTenantStore = create<TenantState>((set, get) => ({
       set({ currentTenant: updatedTenant, isLoading: false });
     } catch (error: unknown) {
       const err = error as Error;
-      set({ error: err.message || 'Error al actualizar salón', isLoading: false });
+      set({
+        error: err.message || "Error al actualizar salón",
+        isLoading: false,
+      });
       throw error;
     }
-  }
+  },
 }));

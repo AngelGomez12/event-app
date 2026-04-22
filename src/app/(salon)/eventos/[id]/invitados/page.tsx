@@ -15,7 +15,15 @@ import {
   Box,
   Separator,
 } from "@radix-ui/themes";
-import { Plus, Link as LinkIcon, Check, X, ArrowLeft, QrCode, Eye } from "lucide-react";
+import {
+  Plus,
+  Link as LinkIcon,
+  Check,
+  X,
+  ArrowLeft,
+  QrCode,
+  Eye,
+} from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import Link from "next/link";
 
@@ -93,7 +101,7 @@ export default function SalonInvitadosPage() {
     alert(`QR enviado a ${inv.nombre || inv.telefono} con éxito.`);
   };
 
-const estadoColor = (estado: string): "green" | "red" | "amber" => {
+  const estadoColor = (estado: string): "green" | "red" | "amber" => {
     if (estado === "confirmado") return "green";
     if (estado === "rechazado") return "red";
     return "amber";
@@ -127,11 +135,7 @@ const estadoColor = (estado: string): "green" | "red" | "amber" => {
     {
       header: "Estado",
       accessor: (inv: Invitado) => (
-        <Badge
-          color={estadoColor(inv.estado)}
-          variant="soft"
-          radius="full"
-        >
+        <Badge color={estadoColor(inv.estado)} variant="soft" radius="full">
           {inv.estado.toUpperCase()}
         </Badge>
       ),
@@ -139,23 +143,27 @@ const estadoColor = (estado: string): "green" | "red" | "amber" => {
     {
       header: "Acciones",
       accessor: (inv: Invitado) => {
-        const isConfirmed = inv.estado?.toLowerCase() === 'confirmado' || inv.estado?.toLowerCase() === 'confirmed';
+        const isConfirmed =
+          inv.estado?.toLowerCase() === "confirmado" ||
+          inv.estado?.toLowerCase() === "confirmed";
 
         return (
           <Flex gap="2">
             {isConfirmed && (
               <Button
-                  variant="soft"
-                  size="1"
-                  color="violet"
-                  onClick={() => sendQR(inv)}
-                  title="Enviar QR de Acceso"
-                  className="cursor-pointer"
+                variant="soft"
+                size="1"
+                color="violet"
+                onClick={() => sendQR(inv)}
+                title="Enviar QR de Acceso"
+                className="cursor-pointer"
               >
-                  <Flex align="center" gap="1" px="1">
-                      <QrCode size={14} />
-                      <Text size="1" weight="bold">QR</Text>
-                  </Flex>
+                <Flex align="center" gap="1" px="1">
+                  <QrCode size={14} />
+                  <Text size="1" weight="bold">
+                    QR
+                  </Text>
+                </Flex>
               </Button>
             )}
             <Button
@@ -166,7 +174,7 @@ const estadoColor = (estado: string): "green" | "red" | "amber" => {
               title="Ver Invitación"
             >
               <Link href={`/invitacion/${inv.id}`} target="_blank">
-                  <Eye size={14} />
+                <Eye size={14} />
               </Link>
             </Button>
             <Button
@@ -196,7 +204,7 @@ const estadoColor = (estado: string): "green" | "red" | "amber" => {
           </Flex>
         );
       },
-      align: "right" as const,
+      align: "end" as const,
     },
   ];
 
