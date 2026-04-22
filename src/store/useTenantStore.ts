@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { tenantService } from '@/services/tenant.service';
-import { Tenant } from '@/lib/api';
+import { Tenant, PaginationMeta } from '@/lib/api';
 
 export interface TenantStats {
   totalTenants: number;
@@ -16,9 +16,11 @@ interface TenantState {
   stats: TenantStats | null;
   isLoading: boolean;
   error: string | null;
+  // Pagination
+  pagination: PaginationMeta;
 
   // Acciones
-  fetchTenants: () => Promise<void>;
+  fetchTenants: (page?: number, limit?: number, search?: string) => Promise<void>;
   fetchCurrentTenant: () => Promise<void>;
   fetchStats: () => Promise<void>;
   addTenant: (name: string, customDomain: string) => Promise<void>;
@@ -27,18 +29,30 @@ interface TenantState {
   updateCurrentTenant: (data: Partial<Tenant>) => Promise<void>;
 }
 
-export const useTenantStore = create<TenantState>((set) => ({
+export const useTenantStore = create<TenantState>((set, get) => ({
   tenants: [],
   currentTenant: null,
   stats: null,
   isLoading: false,
   error: null,
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+  },
 
-  fetchTenants: async () => {
+  fetchTenants: async (page, limit, search) => {
     set({ isLoading: true, error: null });
     try {
-      const data = await tenantService.getAll();
-      set({ tenants: data, isLoading: false });
+      const response = await tenantService.getAll(
+        {page, limit, search}
+      );
+      set({ 
+        tenants: response.data, 
+        pagination: response.meta,
+        isLoading: false 
+      });
     } catch (error: unknown) {
       const err = error as Error;
       set({ error: err.message || 'Error al cargar los salones', isLoading: false });

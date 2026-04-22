@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { PaginatedResponse } from '@/lib/api';
 
 export interface GlobalNotification {
   id: string;
@@ -20,13 +21,16 @@ export const notificationService = {
     }
   },
 
-  getAll: async (): Promise<GlobalNotification[]> => {
+  getAll: async (page: number = 1, limit: number = 10, search?: string): Promise<PaginatedResponse<GlobalNotification>> => {
     try {
-      const response = await apiClient.get('/notifications/all');
-      return response.data.data || [];
+      const url = search 
+        ? `/notifications/all?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
+        : `/notifications/all?page=${page}&limit=${limit}`;
+      const response = await apiClient.get(url);
+      return response.data;
     } catch (error) {
       console.error('Error fetching all notifications', error);
-      return [];
+      return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } };
     }
   },
 

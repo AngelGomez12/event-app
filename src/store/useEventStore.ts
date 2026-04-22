@@ -1,15 +1,17 @@
 import { create } from 'zustand';
 import { eventService } from '@/services/event.service';
-import { Event, CreateEventDto, EventStatus } from '@/lib/api';
+import { Event, CreateEventDto, EventStatus, PaginationMeta } from '@/lib/api';
 
 interface EventState {
   eventos: Event[];
   myEvent: Event | null;
   isLoading: boolean;
   error: string | null;
+  // Pagination
+  pagination: PaginationMeta;
 
   // Acciones
-  fetchEventos: () => Promise<void>;
+  fetchEventos: (page?: number, limit?: number, search?: string) => Promise<void>;
   fetchMyEvent: () => Promise<void>;
   addEvento: (nuevoEvento: CreateEventDto) => Promise<void>;
   updateEstadoEvento: (id: string, status: EventStatus) => Promise<void>;
@@ -19,17 +21,32 @@ interface EventState {
   removeEventPayment: (eventId: string, paymentId: string) => Promise<void>;
 }
 
-export const useEventStore = create<EventState>((set) => ({
+export const useEventStore = create<EventState>((set, get) => ({
   eventos: [],
   myEvent: null,
   isLoading: false,
   error: null,
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+  },
 
-  fetchEventos: async () => {
+  fetchEventos: async (page, limit, search) => {
+    const { pagination } = get();
     set({ isLoading: true, error: null });
     try {
-      const data = await eventService.getAll();
-      set({ eventos: data, isLoading: false });
+      const response = await eventService.getAll(
+        page || pagination.page, 
+        limit || pagination.limit,
+        search
+      );
+      set({ 
+        eventos: response.data, 
+        pagination: response.meta,
+        isLoading: false 
+      });
     } catch (error: any) {
       set({ error: error.message || 'Error al cargar los eventos', isLoading: false });
     }
@@ -38,8 +55,8 @@ export const useEventStore = create<EventState>((set) => ({
   fetchMyEvent: async () => {
     set({ isLoading: true, error: null });
     try {
-      const data = await eventService.getAll();
-      set({ myEvent: data.length > 0 ? data[0] : null, isLoading: false });
+      const response = await eventService.getAll(1, 1);
+      set({ myEvent: response.data.length > 0 ? response.data[0] : null, isLoading: false });
     } catch (error: any) {
       set({ error: error.message || 'Error al cargar tu evento', isLoading: false });
     }

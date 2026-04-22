@@ -1,11 +1,14 @@
 import apiClient from './apiClient';
-import { Event, CreateEventDto, EventStatus } from '@/lib/api';
+import { Event, CreateEventDto, EventStatus, PaginatedResponse } from '@/lib/api';
 
 export const eventService = {
-  getAll: async (): Promise<Event[]> => {
+  getAll: async (page: number = 1, limit: number = 10, search?: string): Promise<PaginatedResponse<Event>> => {
     try {
-      const response = await apiClient.get('/events');
-      return response.data.data || [];
+      const url = search 
+        ? `/events?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
+        : `/events?page=${page}&limit=${limit}`;
+      const response = await apiClient.get(url);
+      return response.data;
     } catch (error: any) {
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);

@@ -1,28 +1,45 @@
 import { create } from 'zustand';
 import { notificationService, GlobalNotification } from '@/services/notification.service';
+import { PaginationMeta } from '@/lib/api';
 
 interface NotificationState {
   notifications: GlobalNotification[];
   activeNotifications: GlobalNotification[];
   isLoading: boolean;
+  pagination: PaginationMeta;
   
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: (page?: number, limit?: number, search?: string) => Promise<void>;
   fetchActiveNotifications: () => Promise<void>;
   addNotification: (data: Partial<GlobalNotification>) => Promise<void>;
   updateNotification: (id: string, data: Partial<GlobalNotification>) => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
 }
 
-export const useNotificationStore = create<NotificationState>((set) => ({
+export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   activeNotifications: [],
   isLoading: false,
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+  },
 
-  fetchNotifications: async () => {
+  fetchNotifications: async (page, limit, search) => {
+    const { pagination } = get();
     set({ isLoading: true });
     try {
-      const notifications = await notificationService.getAll();
-      set({ notifications, isLoading: false });
+      const response = await notificationService.getAll(
+        page || pagination.page, 
+        limit || pagination.limit,
+        search
+      );
+      set({ 
+        notifications: response.data, 
+        pagination: response.meta,
+        isLoading: false 
+      });
     } catch (error) {
       console.error(error);
       set({ isLoading: false });

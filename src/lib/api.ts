@@ -125,6 +125,18 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export const api = {

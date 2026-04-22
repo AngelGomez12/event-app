@@ -1,11 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button, Dialog, Flex, Text, Badge, Table, Spinner, Separator, Box } from '@radix-ui/themes';
-import { History, DollarSign, Calendar, ExternalLink } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { tenantService } from '@/services/tenant.service';
+import { useState, useEffect } from "react";
+import {
+  Button,
+  Dialog,
+  Flex,
+  Text,
+  Badge,
+  Spinner,
+  Separator,
+  Box,
+} from "@radix-ui/themes";
+import { History, DollarSign, Calendar, ExternalLink } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { tenantService } from "@/services/tenant.service";
+import { DataTable } from "@/components/DataTable";
+import { PaginationMeta } from "@/lib/api";
 
 interface Props {
   tenantId: string;
@@ -13,27 +24,86 @@ interface Props {
   trigger?: React.ReactNode;
 }
 
-export function ViewPaymentHistoryModal({ tenantId, tenantName, trigger }: Props) {
+export function ViewPaymentHistoryModal({
+  tenantId,
+  tenantName,
+  trigger,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    total: 0,
+    page: 1,
+    limit: 5,
+    totalPages: 0,
+  });
+
+  const fetchHistory = async (page: number) => {
+    setLoading(true);
+    try {
+      const response = await tenantService.getTenantPayments(
+        tenantId,
+        page,
+        pagination.limit,
+      );
+      setPayments(response.data);
+      setPagination(response.meta);
+    } catch (error) {
+      console.error("Error fetching payment history:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (open && tenantId) {
-      const fetchHistory = async () => {
-        setLoading(true);
-        try {
-          const data = await tenantService.getTenantPayments(tenantId);
-          setPayments(data);
-        } catch (error) {
-          console.error('Error fetching payment history:', error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchHistory();
+      fetchHistory(1);
     }
   }, [open, tenantId]);
+
+  const columns = [
+    {
+      header: "Fecha",
+      accessor: (pay: any) => (
+        <Flex align="center" gap="2">
+          <Calendar size={12} color="gray" />
+          <Text size="2">
+            {format(new Date(pay.paymentDate), "d 'de' MMM, yyyy", {
+              locale: es,
+            })}
+          </Text>
+        </Flex>
+      ),
+    },
+    {
+      header: "Plan",
+      accessor: (pay: any) => (
+        <Badge color="blue" variant="soft">
+          {pay.plan}
+        </Badge>
+      ),
+    },
+    {
+      header: "Monto",
+      accessor: (pay: any) => (
+        <Text size="2" weight="bold" color="green">
+          {pay.currency} {Number(pay.amount).toLocaleString()}
+        </Text>
+      ),
+    },
+    {
+      header: "Referencia MP",
+      accessor: (pay: any) => (
+        <Flex align="center" gap="1">
+          <Text size="1" color="gray">
+            #{pay.externalPaymentId}
+          </Text>
+          <ExternalLink size={10} color="gray" />
+        </Flex>
+      ),
+    },
+  ];
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -55,61 +125,23 @@ export function ViewPaymentHistoryModal({ tenantId, tenantName, trigger }: Props
 
         <Separator size="4" mb="4" />
 
-        {loading ? (
-          <Flex justify="center" align="center" py="8">
-            <Spinner size="3" />
-          </Flex>
-        ) : payments.length > 0 ? (
-          <div className="max-h-[400px] overflow-auto">
-            <Table.Root variant="surface">
-              <Table.Header>
-                <Table.Row>
-                  <Table.ColumnHeaderCell>Fecha</Table.ColumnHeaderCell>
-                  <Table.ColumnHeaderCell>Plan</Table.ColumnHeaderCell>
-                  <Table.ColumnHeaderCell>Monto</Table.ColumnHeaderCell>
-                  <Table.ColumnHeaderCell>Referencia MP</Table.ColumnHeaderCell>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {payments.map((pay) => (
-                  <Table.Row key={pay.id} align="center">
-                    <Table.Cell>
-                      <Flex align="center" gap="2">
-                        <Calendar size={12} color="gray" />
-                        <Text size="2">
-                          {format(new Date(pay.paymentDate), "d 'de' MMM, yyyy", { locale: es })}
-                        </Text>
-                      </Flex>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Badge color="blue" variant="soft">{pay.plan}</Badge>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Text size="2" weight="bold" color="green">
-                        {pay.currency} {Number(pay.amount).toLocaleString()}
-                      </Text>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Flex align="center" gap="1">
-                        <Text size="1" color="gray">#{pay.externalPaymentId}</Text>
-                        <ExternalLink size={10} color="gray" />
-                      </Flex>
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Root>
-          </div>
-        ) : (
-          <Flex direction="column" align="center" py="8" gap="2">
-            <DollarSign size={32} color="gray" style={{ opacity: 0.3 }} />
-            <Text color="gray" size="2">No se encontraron pagos registrados para este salón.</Text>
-          </Flex>
-        )}
+        <Box className="min-h-[300px]">
+          <DataTable
+            columns={columns}
+            data={payments}
+            isLoading={loading}
+            emptyMessage="No se encontraron pagos registrados para este salón."
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={(page) => fetchHistory(page)}
+          />
+        </Box>
 
         <Flex gap="3" mt="6" justify="end">
           <Dialog.Close>
-            <Button variant="soft" color="gray">Cerrar</Button>
+            <Button variant="soft" color="gray">
+              Cerrar
+            </Button>
           </Dialog.Close>
         </Flex>
       </Dialog.Content>

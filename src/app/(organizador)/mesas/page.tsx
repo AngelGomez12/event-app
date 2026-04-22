@@ -68,7 +68,7 @@ export default function MesasPage() {
 
     const handleSearch = useCallback((query: string) => {
         if (myEvent) {
-            fetchInvitados(myEvent.id, query);
+            fetchInvitados(myEvent.id, 1, undefined, query);
         }
     }, [myEvent, fetchInvitados]);
 

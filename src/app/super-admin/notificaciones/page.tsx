@@ -1,20 +1,34 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heading, Text, Badge, Table, Flex, Card, Button, Dialog, TextField, TextArea, Select, Switch } from '@radix-ui/themes';
-import { Bell, Plus, Trash, Megaphone } from 'lucide-react';
+import { Heading, Text, Badge, Flex, Card, Button, Dialog, TextField, TextArea, Select, Switch, Box } from '@radix-ui/themes';
+import { Plus, Trash, Megaphone } from 'lucide-react';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { DataTable } from '@/components/DataTable';
+import { GlobalNotification } from '@/services/notification.service';
 
 export default function NotificationsAdminPage() {
-  const { notifications, fetchNotifications, addNotification, updateNotification, deleteNotification, isLoading } = useNotificationStore();
+  const { 
+    notifications, fetchNotifications, addNotification, 
+    updateNotification, deleteNotification, isLoading, pagination 
+  } = useNotificationStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    fetchNotifications(1, pagination.limit, search);
+  }, [fetchNotifications, search]);
+
+  const handlePageChange = (page: number) => {
+    fetchNotifications(page, pagination.limit, search);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -29,6 +43,7 @@ export default function NotificationsAdminPage() {
         isActive: true
       });
       setIsModalOpen(false);
+      fetchNotifications(1, pagination.limit, search);
     } catch (error) {
       console.error(error);
     } finally {
@@ -39,6 +54,57 @@ export default function NotificationsAdminPage() {
   const toggleActive = async (id: string, current: boolean) => {
     await updateNotification(id, { isActive: !current });
   };
+
+  const columns = [
+    {
+        header: 'Aviso',
+        accessor: (n: GlobalNotification) => (
+            <Box>
+                <Text weight="bold" as="div" size="2">{n.title}</Text>
+                <Text size="1" color="gray" className="line-clamp-1">{n.message}</Text>
+            </Box>
+        )
+    },
+    {
+        header: 'Tipo',
+        accessor: (n: GlobalNotification) => (
+            <Badge color={
+                n.type === 'info' ? 'blue' : 
+                n.type === 'warning' ? 'orange' : 
+                n.type === 'success' ? 'green' : 'red'
+            }>
+                {n.type.toUpperCase()}
+            </Badge>
+        )
+    },
+    {
+        header: 'Fecha',
+        accessor: (n: GlobalNotification) => (
+            <Text size="2">{format(new Date(n.createdAt), 'dd/MM HH:mm', { locale: es })}</Text>
+        )
+    },
+    {
+        header: 'Estado',
+        accessor: (n: GlobalNotification) => (
+            <Flex align="center" gap="2">
+                <Switch 
+                    checked={n.isActive} 
+                    onCheckedChange={() => toggleActive(n.id, n.isActive)} 
+                />
+                <Text size="1">{n.isActive ? 'Activa' : 'Pausada'}</Text>
+            </Flex>
+        )
+    },
+    {
+        header: 'Acciones',
+        accessor: (n: GlobalNotification) => (
+            <Button variant="ghost" color="red" size="1" onClick={() => deleteNotification(n.id)}>
+                <Trash size={14} />
+            </Button>
+        ),
+        align: 'center' as const
+    }
+  ];
 
   return (
     <div className="max-w-5xl mx-auto py-6">
@@ -93,66 +159,18 @@ export default function NotificationsAdminPage() {
         </Dialog.Root>
       </Flex>
 
-      <Card size="3">
-        <Table.Root variant="surface">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeaderCell>Aviso</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Tipo</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Fecha</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Estado</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell justify="center">Acciones</Table.ColumnHeaderCell>
-            </Table.Row>
-          </Table.Header>
-
-          <Table.Body>
-            {notifications.map((n) => (
-              <Table.Row key={n.id} align="center">
-                <Table.Cell>
-                  <Text weight="bold" as="div">{n.title}</Text>
-                  <Text size="1" color="gray" className="line-clamp-1">{n.message}</Text>
-                </Table.Cell>
-                <Table.Cell>
-                  <Badge color={
-                    n.type === 'info' ? 'blue' : 
-                    n.type === 'warning' ? 'orange' : 
-                    n.type === 'success' ? 'green' : 'red'
-                  }>
-                    {n.type.toUpperCase()}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell>
-                  <Text size="2">{format(new Date(n.createdAt), 'dd/MM HH:mm', { locale: es })}</Text>
-                </Table.Cell>
-                <Table.Cell>
-                  <Flex align="center" gap="2">
-                    <Switch 
-                      checked={n.isActive} 
-                      onCheckedChange={() => toggleActive(n.id, n.isActive)} 
-                    />
-                    <Text size="1">{n.isActive ? 'Activa' : 'Pausada'}</Text>
-                  </Flex>
-                </Table.Cell>
-                <Table.Cell justify="center">
-                  <Button variant="ghost" color="red" size="1" onClick={() => deleteNotification(n.id)}>
-                    <Trash size={14} />
-                  </Button>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-
-            {notifications.length === 0 && !isLoading && (
-              <Table.Row>
-                <Table.Cell colSpan={5} className="text-center py-10">
-                  <Flex direction="column" align="center" gap="2">
-                    <Megaphone size={32} className="text-gray-300" />
-                    <Text color="gray">No hay notificaciones enviadas.</Text>
-                  </Flex>
-                </Table.Cell>
-              </Table.Row>
-            )}
-          </Table.Body>
-        </Table.Root>
+      <Card size="3" className="p-0 overflow-hidden">
+        <DataTable
+            columns={columns}
+            data={notifications}
+            isLoading={isLoading}
+            emptyMessage="No hay notificaciones enviadas."
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={handlePageChange}
+            onSearchChange={handleSearch}
+            searchPlaceholder="Buscar por título..."
+        />
       </Card>
     </div>
   );

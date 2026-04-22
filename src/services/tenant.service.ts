@@ -1,12 +1,22 @@
 import api from "@/lib/axios";
-import { Tenant, OnboardingRegisterDto } from '@/lib/api';
+import { Tenant, OnboardingRegisterDto, PaginatedResponse } from '@/lib/api';
+
+export interface TenantFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
 
 export const tenantService = {
-  getAll: async (): Promise<Tenant[]> => {
+  getAll: async (filters: TenantFilters = {}): Promise<PaginatedResponse<Tenant>> => {
     try {
-      const response = await api.get('/tenants');
-      // Extraemos la data del interceptor del backend
-      return response.data.data || [];
+      const params = new URLSearchParams();
+      if (filters.page) params.append('page', filters.page.toString());
+      if (filters.limit) params.append('limit', filters.limit.toString());
+      if (filters.search) params.append('search', filters.search);
+      
+      const response = await api.get(`/tenants?${params.toString()}`);
+      return response.data;
     } catch (error: any) {
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -27,10 +37,10 @@ export const tenantService = {
     }
   },
 
-  getTenantPayments: async (id: string): Promise<any[]> => {
+  getTenantPayments: async (id: string, page: number = 1, limit: number = 10): Promise<PaginatedResponse<any>> => {
     try {
-      const response = await api.get(`/tenants/${id}/payments`);
-      return response.data.data || [];
+      const response = await api.get(`/tenants/${id}/payments?page=${page}&limit=${limit}`);
+      return response.data;
     } catch (error: any) {
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
@@ -42,7 +52,6 @@ export const tenantService = {
   create: async (name: string, customDomain: string): Promise<Tenant> => {
     try {
       const response = await api.post('/tenants', { name, customDomain });
-      // Extraemos la data del interceptor del backend
       return response.data.data;
     } catch (error: any) {
       if (error.response?.data?.message) {
@@ -55,7 +64,6 @@ export const tenantService = {
   onboard: async (data: OnboardingRegisterDto): Promise<any> => {
     try {
       const response = await api.post('/onboarding/register', data);
-      // Extraemos la data del interceptor del backend (initPoint, etc)
       return response.data.data;
     } catch (error: any) {
       if (error.response?.data?.message) {
@@ -149,4 +157,3 @@ export const tenantService = {
     }
   }
 };
-

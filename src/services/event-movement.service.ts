@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { PaginatedResponse } from '@/lib/api';
 
 export interface Movement {
   id: string;
@@ -10,10 +11,13 @@ export interface Movement {
 }
 
 export const eventMovementService = {
-  findAll: async (eventId: string): Promise<Movement[]> => {
+  findAll: async (eventId: string, page: number = 1, limit: number = 20, search?: string): Promise<PaginatedResponse<Movement>> => {
     try {
-      const response = await apiClient.get(`/events/${eventId}/movements`);
-      return response.data.data || [];
+      const url = search 
+        ? `/events/${eventId}/movements?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
+        : `/events/${eventId}/movements?page=${page}&limit=${limit}`;
+      const response = await apiClient.get(url);
+      return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Error al obtener los movimientos');
     }

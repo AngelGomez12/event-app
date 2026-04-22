@@ -1,29 +1,117 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heading, Text, Badge, Table, Flex, Card, Button, DropdownMenu, Grid } from '@radix-ui/themes';
+import { Heading, Text, Badge, Flex, Card, Button, DropdownMenu, Grid } from '@radix-ui/themes';
 import { MoreHorizontal, Users, DollarSign, AlertCircle, Ban, Eye } from 'lucide-react';
 import { CreateTenantModal } from './CreateTenantModal';
 import { EditTenantLimitsModal } from './EditTenantLimitsModal';
 import { ViewTenantDetailsModal } from './ViewTenantDetailsModal';
 import { useTenantStore } from '@/store/useTenantStore';
 import { authService } from '@/services/auth.service';
+import { DataTable } from '@/components/DataTable';
+import { Tenant } from '@/lib/api';
 
 export default function SuperAdminDashboard() {
-  const { tenants, stats, fetchTenants, fetchStats, updateTenantStatus, isLoading } = useTenantStore();
+  const { tenants, stats, fetchTenants, fetchStats, updateTenantStatus, isLoading, pagination } = useTenantStore();
   const [actingOn, setActingOn] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    fetchTenants();
     fetchStats();
-  }, [fetchTenants, fetchStats]);
+  }, [fetchStats]);
+
+  useEffect(() => {
+    fetchTenants(1, pagination.limit, search);
+  }, [fetchTenants, pagination.limit, search]);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     setActingOn(id);
     await updateTenantStatus(id, newStatus);
     fetchStats(); // Refresh stats after status change
+    fetchTenants(pagination.page, pagination.limit, search);
     setActingOn(null);
   };
+
+  const handlePageChange = (page: number) => {
+    fetchTenants(page, pagination.limit, search);
+  };
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+  };
+
+  const columns = [
+    {
+      header: 'Nombre del Salón',
+      accessor: (tenant: Tenant) => (
+        <>
+          <Text weight="bold">{tenant.name}</Text>
+          <Text as="div" size="1" color="gray">
+            {tenant.id}
+          </Text>
+        </>
+      ),
+    },
+    {
+      header: 'Dominio',
+      accessor: (tenant: Tenant) => tenant.customDomain || 'Standard',
+    },
+    {
+      header: 'Plan',
+      accessor: (tenant: Tenant) => <Badge color="blue">{tenant.subscriptionPlan}</Badge>,
+    },
+    {
+      header: 'Estado',
+      accessor: (tenant: Tenant) => (
+        <Badge color={tenant.status === 'ACTIVE' ? 'green' : tenant.status === 'PENDING_PAYMENT' ? 'orange' : 'red'}>
+          {tenant.status}
+        </Badge>
+      ),
+    },
+    {
+      header: 'Acciones',
+      align: 'center' as const,
+      accessor: (tenant: Tenant) => (
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            <Button variant="ghost" color="gray" size="2" disabled={actingOn === tenant.id}>
+              <MoreHorizontal size={16} />
+            </Button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content>
+            <ViewTenantDetailsModal
+              tenantId={tenant.id}
+              trigger={
+                <DropdownMenu.Item onSelect={(e) => e.preventDefault()}>
+                  <Flex align="center" gap="2">
+                    <Eye size={14} /> Ver Detalles
+                  </Flex>
+                </DropdownMenu.Item>
+              }
+            />
+            <DropdownMenu.Item onClick={() => authService.impersonate(tenant.id)}>
+              <Flex align="center" gap="2">
+                <Eye size={14} /> Entrar como Salón
+              </Flex>
+            </DropdownMenu.Item>
+            <DropdownMenu.Separator />
+            <EditTenantLimitsModal tenant={tenant} />
+            <DropdownMenu.Separator />
+            <DropdownMenu.Item onClick={() => handleStatusChange(tenant.id, 'ACTIVE')} disabled={tenant.status === 'ACTIVE'}>
+              Activar
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              color="red"
+              onClick={() => handleStatusChange(tenant.id, 'SUSPENDED')}
+              disabled={tenant.status === 'SUSPENDED'}
+            >
+              Suspender
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+      ),
+    },
+  ];
 
   return (
     <div className="max-w-5xl mx-auto py-6">
@@ -81,103 +169,17 @@ export default function SuperAdminDashboard() {
       )}
 
       <Card size="3" variant="classic">
-        <Table.Root variant="surface">
-          <Table.Header>
-            <Table.Row>
-              <Table.ColumnHeaderCell>Nombre del Salón</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Dominio</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Plan</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell>Estado</Table.ColumnHeaderCell>
-              <Table.ColumnHeaderCell justify="center">Acciones</Table.ColumnHeaderCell>
-            </Table.Row>
-          </Table.Header>
-
-          <Table.Body>
-            {Array.isArray(tenants) &&
-              tenants.map((tenant) => (
-                <Table.Row key={tenant.id} align="center">
-                  <Table.RowHeaderCell>
-                    <Text weight="bold">{tenant.name}</Text>
-                    <Text as="div" size="1" color="gray">
-                      {tenant.id}
-                    </Text>
-                  </Table.RowHeaderCell>
-                  <Table.Cell>{tenant.customDomain || 'Standard'}</Table.Cell>
-                  <Table.Cell>
-                    <Badge color="blue">{tenant.subscriptionPlan}</Badge>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Badge color={tenant.status === 'ACTIVE' ? "green" : tenant.status === 'PENDING_PAYMENT' ? "orange" : "red"}>
-                      {tenant.status}
-                    </Badge>
-                  </Table.Cell>
-                  <Table.Cell justify="center">
-                    <DropdownMenu.Root>
-                      <DropdownMenu.Trigger>
-                        <Button variant="ghost" color="gray" size="2" disabled={actingOn === tenant.id}>
-                          <MoreHorizontal size={16} />
-                        </Button>
-                      </DropdownMenu.Trigger>
-                      <DropdownMenu.Content>
-                        <ViewTenantDetailsModal 
-                          tenantId={tenant.id} 
-                          trigger={
-                            <DropdownMenu.Item onSelect={(e) => e.preventDefault()}>
-                              <Flex align="center" gap="2">
-                                <Eye size={14} /> Ver Detalles
-                              </Flex>
-                            </DropdownMenu.Item>
-                          }
-                        />
-                        <DropdownMenu.Item 
-                          onClick={() => authService.impersonate(tenant.id)}
-                        >
-                          <Flex align="center" gap="2">
-                            <Eye size={14} /> Entrar como Salón
-                          </Flex>
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Separator />
-                        <EditTenantLimitsModal tenant={tenant} />
-                        <DropdownMenu.Separator />
-                        <DropdownMenu.Item 
-                          onClick={() => handleStatusChange(tenant.id, 'ACTIVE')}
-                          disabled={tenant.status === 'ACTIVE'}
-                        >
-                          Activar
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Item 
-                          color="red"
-                          onClick={() => handleStatusChange(tenant.id, 'SUSPENDED')}
-                          disabled={tenant.status === 'SUSPENDED'}
-                        >
-                          Suspender
-                        </DropdownMenu.Item>
-                      </DropdownMenu.Content>
-                    </DropdownMenu.Root>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-
-            {(!Array.isArray(tenants) || tenants.length === 0) &&
-              !isLoading && (
-                <Table.Row>
-                  <Table.Cell colSpan={5} className="text-center py-8">
-                    <Text color="gray">
-                      No se encontraron salones registrados.
-                    </Text>
-                  </Table.Cell>
-                </Table.Row>
-              )}
-
-            {isLoading && (
-              <Table.Row>
-                <Table.Cell colSpan={5} className="text-center py-8">
-                  <Text color="gray">Cargando salones...</Text>
-                </Table.Cell>
-              </Table.Row>
-            )}
-          </Table.Body>
-        </Table.Root>
+        <DataTable
+          columns={columns}
+          data={tenants}
+          isLoading={isLoading}
+          emptyMessage="No se encontraron salones registrados."
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          onPageChange={handlePageChange}
+          onSearchChange={handleSearch}
+          searchPlaceholder="Buscar por nombre o dominio..."
+        />
       </Card>
     </div>
   );

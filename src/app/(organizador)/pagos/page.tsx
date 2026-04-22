@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, Card, Heading, Text, Badge, Table, Dialog, TextField, Select, Flex, Box, Separator, Spinner } from '@radix-ui/themes';
+import { Button, Card, Heading, Text, Badge, Dialog, TextField, Select, Flex, Box, Separator, Spinner } from '@radix-ui/themes';
 import { Plus, Trash, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { useEventStore } from '@/store/useEventStore';
 import { useEventMovementStore } from '@/store/useEventMovementStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { DataTable } from '@/components/DataTable';
+import { Movement } from '@/services/event-movement.service';
 
 type TipoMovimiento = 'INCOME' | 'EXPENSE';
 
@@ -14,13 +16,14 @@ export default function PagosPage() {
     const { myEvent, fetchMyEvent } = useEventStore();
     const { 
         movements, totalIncome, totalExpense, balance, 
-        fetchMovements, addMovement, deleteMovement, isLoading 
+        fetchMovements, addMovement, deleteMovement, isLoading, pagination 
     } = useEventMovementStore();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [concepto, setConcepto] = useState('');
     const [monto, setMonto] = useState('');
     const [tipo, setTipo] = useState<TipoMovimiento>('EXPENSE');
+    const [search, setSearch] = useState('');
 
     useEffect(() => {
         fetchMyEvent();
@@ -28,9 +31,19 @@ export default function PagosPage() {
 
     useEffect(() => {
         if (myEvent) {
-            fetchMovements(myEvent.id);
+            fetchMovements(myEvent.id, 1, pagination.limit, search);
         }
-    }, [myEvent, fetchMovements]);
+    }, [myEvent, fetchMovements, search]);
+
+    const handlePageChange = (page: number) => {
+        if (myEvent) {
+            fetchMovements(myEvent.id, page, pagination.limit, search);
+        }
+    };
+
+    const handleSearch = (value: string) => {
+        setSearch(value);
+    };
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,6 +59,7 @@ export default function PagosPage() {
             setIsModalOpen(false);
             setConcepto('');
             setMonto('');
+            fetchMovements(myEvent.id, 1, pagination.limit, search);
         } catch (error) {
             console.error('Error adding movement:', error);
         }
@@ -54,7 +68,49 @@ export default function PagosPage() {
     const handleDelete = async (id: string) => {
         if (!myEvent) return;
         await deleteMovement(myEvent.id, id);
+        fetchMovements(myEvent.id, pagination.page, pagination.limit, search);
     };
+
+    const columns = [
+        {
+            header: 'Fecha',
+            accessor: (mov: Movement) => (
+                <Text size="2" color="gray">
+                    {format(new Date(mov.date), 'dd MMM yyyy', { locale: es })}
+                </Text>
+            )
+        },
+        {
+            header: 'Concepto',
+            accessor: (mov: Movement) => <Text size="2" weight="medium">{mov.concept}</Text>
+        },
+        {
+            header: 'Tipo',
+            accessor: (mov: Movement) => (
+                <Badge color={mov.type === 'INCOME' ? 'green' : 'red'} variant="soft" radius="full">
+                    {mov.type === 'INCOME' ? 'INGRESO' : 'EGRESO'}
+                </Badge>
+            )
+        },
+        {
+            header: 'Monto',
+            accessor: (mov: Movement) => (
+                <Text size="2" weight="bold" style={{ color: mov.type === 'INCOME' ? 'var(--green-11)' : 'var(--red-11)' }}>
+                    {mov.type === 'INCOME' ? '+' : '-'}${Number(mov.amount).toLocaleString()}
+                </Text>
+            ),
+            align: 'right' as const
+        },
+        {
+            header: 'Acciones',
+            accessor: (mov: Movement) => (
+                <Button variant="ghost" size="1" color="red" onClick={() => handleDelete(mov.id)} loading={isLoading}>
+                    <Trash size={14} />
+                </Button>
+            ),
+            align: 'right' as const
+        }
+    ];
 
     if (!myEvent) {
         return (
@@ -119,7 +175,7 @@ export default function PagosPage() {
             <div className="grid gap-4 md:grid-cols-3">
                 <Card size="3" style={{ border: '1px solid var(--green-5)', background: 'var(--green-1)' }}>
                     <Flex justify="between" align="start" mb="3">
-                        <Text size="2" weight="medium" style={{ color: 'var(--green-11)' }}>Ingresos Totales</Text>
+                        <Text size="2" weight="medium" style={{ color: 'var(--green-11)' }}>Ingresos (Vista Actual)</Text>
                         <TrendingUp size={18} style={{ color: 'var(--green-9)' }} />
                     </Flex>
                     <Heading size="7" weight="bold" style={{ color: 'var(--green-11)' }}>${totalIncome.toLocaleString()}</Heading>
@@ -127,7 +183,7 @@ export default function PagosPage() {
 
                 <Card size="3" style={{ border: '1px solid var(--red-5)', background: 'var(--red-1)' }}>
                     <Flex justify="between" align="start" mb="3">
-                        <Text size="2" weight="medium" style={{ color: 'var(--red-11)' }}>Gastos Totales</Text>
+                        <Text size="2" weight="medium" style={{ color: 'var(--red-11)' }}>Gastos (Vista Actual)</Text>
                         <TrendingDown size={18} style={{ color: 'var(--red-9)' }} />
                     </Flex>
                     <Heading size="7" weight="bold" style={{ color: 'var(--red-11)' }}>${totalExpense.toLocaleString()}</Heading>
@@ -138,7 +194,7 @@ export default function PagosPage() {
                     background: balance >= 0 ? 'var(--violet-1)' : 'var(--orange-1)',
                 }}>
                     <Flex justify="between" align="start" mb="3">
-                        <Text size="2" weight="medium" style={{ color: balance >= 0 ? 'var(--violet-11)' : 'var(--orange-11)' }}>Balance Actual</Text>
+                        <Text size="2" weight="medium" style={{ color: balance >= 0 ? 'var(--violet-11)' : 'var(--orange-11)' }}>Balance (Vista Actual)</Text>
                         <DollarSign size={18} style={{ color: balance >= 0 ? 'var(--violet-9)' : 'var(--orange-9)' }} />
                     </Flex>
                     <Heading size="7" weight="bold" style={{ color: balance >= 0 ? 'var(--violet-11)' : 'var(--orange-11)' }}>
@@ -148,54 +204,21 @@ export default function PagosPage() {
             </div>
 
             {/* Table */}
-            <Card size="3">
-                <Heading size="4" mb="4">Historial de Movimientos</Heading>
-                <Separator size="4" mb="4" />
-                <Table.Root variant="surface">
-                    <Table.Header>
-                        <Table.Row>
-                            <Table.ColumnHeaderCell>Fecha</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Concepto</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell>Tipo</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell justify="end">Monto</Table.ColumnHeaderCell>
-                            <Table.ColumnHeaderCell></Table.ColumnHeaderCell>
-                        </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                        {movements.map((mov) => (
-                            <Table.Row key={mov.id} align="center">
-                                <Table.Cell>
-                                    <Text size="2" color="gray">
-                                        {format(new Date(mov.date), 'dd MMM yyyy', { locale: es })}
-                                    </Text>
-                                </Table.Cell>
-                                <Table.Cell><Text size="2" weight="medium">{mov.concept}</Text></Table.Cell>
-                                <Table.Cell>
-                                    <Badge color={mov.type === 'INCOME' ? 'green' : 'red'} variant="soft" radius="full">
-                                        {mov.type === 'INCOME' ? 'INGRESO' : 'EGRESO'}
-                                    </Badge>
-                                </Table.Cell>
-                                <Table.Cell justify="end">
-                                    <Text size="2" weight="bold" style={{ color: mov.type === 'INCOME' ? 'var(--green-11)' : 'var(--red-11)' }}>
-                                        {mov.type === 'INCOME' ? '+' : '-'}${Number(mov.amount).toLocaleString()}
-                                    </Text>
-                                </Table.Cell>
-                                <Table.Cell>
-                                    <Button variant="ghost" size="1" color="red" onClick={() => handleDelete(mov.id)} loading={isLoading}>
-                                        <Trash size={14} />
-                                    </Button>
-                                </Table.Cell>
-                            </Table.Row>
-                        ))}
-                        {movements.length === 0 && !isLoading && (
-                            <Table.Row>
-                                <Table.Cell colSpan={5} align="center">
-                                    <Text size="2" color="gray" py="4">No hay movimientos registrados.</Text>
-                                </Table.Cell>
-                            </Table.Row>
-                        )}
-                    </Table.Body>
-                </Table.Root>
+            <Card size="3" className="p-0 overflow-hidden">
+                <Box p="4">
+                    <Heading size="4">Historial de Movimientos</Heading>
+                </Box>
+                <DataTable
+                    columns={columns}
+                    data={movements}
+                    isLoading={isLoading}
+                    emptyMessage="No hay movimientos registrados."
+                    currentPage={pagination.page}
+                    totalPages={pagination.totalPages}
+                    onPageChange={handlePageChange}
+                    onSearchChange={handleSearch}
+                    searchPlaceholder="Buscar por concepto..."
+                />
             </Card>
         </Flex>
     );

@@ -6,4 +6,67 @@
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Radix UI Inspired Scale */
+  --color-radix-slate-1: #fbfcfd;
+  --color-radix-slate-2: #f8f9fa;
+  --color-radix-slate-3: #f1f3f5;
+  --color-radix-slate-4: #eceef0;
+  --color-radix-slate-5: #e6e8eb;
+  --color-radix-slate-11: #687076;
+  --color-radix-slate-12: #11181c;
+  
+  --color-radix-violet-9: #7e51f1;
+  --color-radix-violet-10: #7047eb;
+  
+  --border-radix-subtle: 1px solid var(--color-radix-slate-4);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-radix-slate-1);
+    color: var(--color-radix-slate-12);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Core Radix Themes Overrides to match their site */
+  :root {
+    --slate-1: #fbfcfd;
+    --slate-2: #f8f9fa;
+    --slate-3: #f1f3f5;
+    --slate-4: #eceef0;
+    --violet-9: #7e51f1;
+  }
+
+  /* Card refinements - Radix Site Style */
+  .rt-Card {
+    background-color: white !important;
+    border: 1px solid var(--color-radix-slate-4) !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
+    transition: all 0.2s ease;
+  }
+
+  .rt-Card:hover {
+    border-color: var(--color-radix-slate-5) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  /* Button refinements */
+  .rt-Button {
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  /* Badge refinements */
+  .rt-Badge {
+    font-weight: 500 !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Heading refinements */
+  .rt-Heading {
+    letter-spacing: -0.02em !important;
+    color: var(--color-radix-slate-12) !important;
+  }
 }
