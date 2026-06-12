@@ -94,7 +94,7 @@ export const useEventStore = create<EventState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const event = await eventService.getById(id);
-      set({ isLoading: false });
+      set({ myEvent: event, isLoading: false });
       return event;
     } catch (error: any) {
       set({ error: error.message || 'Error al obtener evento', isLoading: false });

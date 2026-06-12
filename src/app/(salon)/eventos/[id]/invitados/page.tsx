@@ -92,13 +92,19 @@ export default function SalonInvitadosPage() {
     alert("Link copiado: " + link);
   };
 
-  const sendQR = (inv: Invitado) => {
-    if (!inv.telefono && !inv.nombre) {
-      alert("El invitado no tiene datos.");
+  const sendQR = async (inv: Invitado) => {
+    if (!inv.email) {
+      alert("El invitado no tiene mail registrado para enviarle el QR.");
       return;
     }
-    // Aquí se llamaría al servicio de envío de QR
-    alert(`QR enviado a ${inv.nombre || inv.telefono} con éxito.`);
+    if (!eventId) return;
+
+    try {
+      await useGuestStore.getState().sendTicket(eventId as string, inv.id);
+      alert(`QR enviado a ${inv.email} con éxito.`);
+    } catch (error: any) {
+      alert(error.message || "Error al enviar el QR.");
+    }
   };
 
   const estadoColor = (estado: string): "green" | "red" | "amber" => {

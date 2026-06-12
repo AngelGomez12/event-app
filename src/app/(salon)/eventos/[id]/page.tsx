@@ -26,6 +26,7 @@ import {
   Receipt,
   Trash2,
   Scan,
+  LayoutGrid,
 } from "lucide-react";
 import { eventService } from "@/services/event.service";
 import { Event, EventStatus, EventType } from "@/lib/api";
@@ -238,6 +239,11 @@ export default function EventoDetallePage() {
           >
             {evento.status}
           </Badge>
+          <Button variant="outline" color="orange" asChild>
+            <Link href={`/eventos/${id}/plano`}>
+              <LayoutGrid size={16} /> Diseñar Plano
+            </Link>
+          </Button>
           <Button variant="solid" color="violet" asChild>
             <Link href={`/eventos/${id}/check-in`}>
               <Scan size={16} /> Check-in Puerta

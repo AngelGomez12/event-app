@@ -14,8 +14,11 @@ import {
   Flex,
   Box,
   Separator,
+  Select,
+  DropdownMenu,
+  IconButton,
 } from "@radix-ui/themes";
-import { Plus, Link as LinkIcon, Check, X, Eye, QrCode } from "lucide-react";
+import { Plus, Link as LinkIcon, Check, X, Eye, QrCode, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { DataTable } from "@/components/DataTable";
 import Link from "next/link";
 
@@ -25,17 +28,20 @@ export default function InvitadosPage() {
     invitados,
     fetchInvitados,
     addInvitado,
+    updateInvitado,
+    removeInvitado,
     updateEstadoInvitado,
     isLoading,
     pagination,
   } = useGuestStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingInvitado, setEditingInvitado] = useState<Invitado | null>(null);
   const [search, setSearch] = useState("");
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [restriccion, setRestriccion] = useState("");
+  const [restriccion, setRestriccion] = useState("ninguna");
 
   useEffect(() => {
     fetchMyEvent();
@@ -46,6 +52,23 @@ export default function InvitadosPage() {
       fetchInvitados(myEvent.id, 1, pagination.limit, search);
     }
   }, [myEvent, fetchInvitados, search]);
+
+  const handleOpenModal = (inv?: Invitado) => {
+    if (inv) {
+      setEditingInvitado(inv);
+      setNombre(inv.nombre);
+      setEmail(inv.email || "");
+      setTelefono(inv.telefono || "");
+      setRestriccion(inv.restriccionAlimentaria || "ninguna");
+    } else {
+      setEditingInvitado(null);
+      setNombre("");
+      setEmail("");
+      setTelefono("");
+      setRestriccion("ninguna");
+    }
+    setIsModalOpen(true);
+  };
 
   const handlePageChange = (page: number) => {
     if (myEvent) {
@@ -60,20 +83,39 @@ export default function InvitadosPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!myEvent) return;
-    await addInvitado(myEvent.id, {
-      nombre,
-      email,
-      telefono,
-      restriccionAlimentaria: restriccion,
-      estado: "pendiente",
-    });
+
+    if (editingInvitado) {
+      await updateInvitado(myEvent.id, editingInvitado.id, {
+        nombre,
+        email,
+        telefono,
+        restriccionAlimentaria: restriccion,
+      });
+    } else {
+      await addInvitado(myEvent.id, {
+        nombre,
+        email,
+        telefono,
+        restriccionAlimentaria: restriccion,
+        estado: "pendiente",
+      });
+    }
+
     setIsModalOpen(false);
     setNombre("");
     setEmail("");
     setTelefono("");
-    setRestriccion("");
-    // Refresh first page after adding
-    fetchInvitados(myEvent.id, 1, pagination.limit, search);
+    setRestriccion("ninguna");
+    setEditingInvitado(null);
+    // Refresh list
+    fetchInvitados(myEvent.id, pagination.page, pagination.limit, search);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!myEvent) return;
+    if (confirm("¿Estás seguro de que querés eliminar a este invitado?")) {
+      await removeInvitado(myEvent.id, id);
+    }
   };
 
   const copyLink = (id: string) => {
@@ -86,13 +128,22 @@ export default function InvitadosPage() {
     alert("Link copiado: " + link);
   };
 
-  const sendQR = (inv: Invitado) => {
+  const sendQR = async (inv: Invitado) => {
     if (!inv.email) {
       alert("El invitado no tiene mail registrado.");
       return;
     }
-    // Aquí se llamaría al servicio de envío de QR
-    alert(`QR enviado a ${inv.email} con éxito.`);
+    if (!myEvent) {
+      alert("No se ha cargado el evento actual.");
+      return;
+    }
+
+    try {
+      await useGuestStore.getState().sendTicket(myEvent.id, inv.id);
+      alert(`QR enviado a ${inv.email} con éxito.`);
+    } catch (error: any) {
+      alert(error.message || "Error al enviar el QR.");
+    }
   };
 
   const estadoColor = (estado: string): "green" | "red" | "amber" => {
@@ -140,13 +191,20 @@ export default function InvitadosPage() {
     {
       header: "Estado",
       accessor: (inv: Invitado) => (
-        <Badge
-          color={estadoColor(inv.estado)}
-          variant="soft"
-          className="font-bold"
-        >
-          {inv.estado?.toUpperCase()}
-        </Badge>
+        <Flex direction="column" gap="1">
+          <Badge
+            color={estadoColor(inv.estado)}
+            variant="soft"
+            className="font-bold"
+          >
+            {inv.estado?.toUpperCase()}
+          </Badge>
+          {inv.restriccionAlimentaria && inv.restriccionAlimentaria !== "ninguna" && (
+            <Badge variant="outline" color="orange" size="1">
+              {inv.restriccionAlimentaria.toUpperCase()}
+            </Badge>
+          )}
+        </Flex>
       ),
     },
     {
@@ -157,60 +215,72 @@ export default function InvitadosPage() {
           inv.estado?.toLowerCase() === "confirmed";
 
         return (
-          <Flex gap="2">
-            {isConfirmed && (
-              <Button
-                variant="soft"
-                size="1"
-                color="violet"
-                onClick={() => sendQR(inv)}
-                title="Enviar QR de Acceso"
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              <IconButton variant="ghost" color="gray" size="2" className="cursor-pointer">
+                <MoreHorizontal size={18} />
+              </IconButton>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content size="2" variant="soft" style={{ minWidth: 160 }}>
+              <DropdownMenu.Item 
+                onClick={() => copyLink(inv.id)}
                 className="cursor-pointer"
               >
-                <Flex align="center" gap="1" px="1">
-                  <QrCode size={14} />
-                  <Text size="1" weight="bold">
-                    QR
-                  </Text>
+                <Flex align="center" gap="2" className="w-full">
+                  <LinkIcon size={14} />
+                  <Text size="2" weight="medium">Copiar Link</Text>
                 </Flex>
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="1"
-              color="blue"
-              asChild
-              title="Ver Invitación"
-            >
-              <Link href={`/invitacion/${inv.id}`} target="_blank">
-                <Eye size={14} />
+              </DropdownMenu.Item>
+              
+              <Link href={`/invitacion/${inv.id}`} target="_blank" className="no-underline">
+                <DropdownMenu.Item className="cursor-pointer">
+                  <Flex align="center" gap="2" className="w-full">
+                    <Eye size={14} />
+                    <Text size="2" weight="medium">Ver Invitación</Text>
+                  </Flex>
+                </DropdownMenu.Item>
               </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="1"
-              color="green"
-              onClick={() => updateEstadoInvitado(inv.id, "confirmado")}
-            >
-              <Check size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="1"
-              color="red"
-              onClick={() => updateEstadoInvitado(inv.id, "rechazado")}
-            >
-              <X size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="1"
-              color="blue"
-              onClick={() => copyLink(inv.id)}
-            >
-              <LinkIcon size={14} />
-            </Button>
-          </Flex>
+
+              {isConfirmed && (
+                <>
+                  <DropdownMenu.Separator />
+                  <DropdownMenu.Item 
+                    onClick={() => sendQR(inv)}
+                    className="cursor-pointer"
+                    color="violet"
+                  >
+                    <Flex align="center" gap="2" className="w-full">
+                      <QrCode size={14} />
+                      <Text size="2" weight="bold">Enviar QR Acceso</Text>
+                    </Flex>
+                  </DropdownMenu.Item>
+                </>
+              )}
+
+              <DropdownMenu.Separator />
+              
+              <DropdownMenu.Item 
+                onClick={() => handleOpenModal(inv)}
+                className="cursor-pointer"
+              >
+                <Flex align="center" gap="2" className="w-full">
+                  <Pencil size={14} />
+                  <Text size="2" weight="medium">Editar Datos</Text>
+                </Flex>
+              </DropdownMenu.Item>
+
+              <DropdownMenu.Item 
+                onClick={() => handleDelete(inv.id)}
+                color="red"
+                className="cursor-pointer"
+              >
+                <Flex align="center" gap="2" className="w-full">
+                  <Trash2 size={14} />
+                  <Text size="2" weight="bold">Eliminar</Text>
+                </Flex>
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
         );
       },
       align: "end" as const,
@@ -239,16 +309,19 @@ export default function InvitadosPage() {
               size="3"
               color="violet"
               className="cursor-pointer font-bold px-5"
+              onClick={() => handleOpenModal()}
             >
               <Plus size={16} /> Agregar Invitado
             </Button>
           </Dialog.Trigger>
           <Dialog.Content size="3" style={{ maxWidth: 440 }}>
             <Dialog.Title className="tracking-tight">
-              Nuevo Invitado
+              {editingInvitado ? "Editar Invitado" : "Nuevo Invitado"}
             </Dialog.Title>
             <Dialog.Description size="2" color="gray" mb="5">
-              Completa los datos del invitado para generar su invitación.
+              {editingInvitado
+                ? "Modificá los datos del invitado seleccionado."
+                : "Completa los datos del invitado para generar su invitación."}
             </Dialog.Description>
             <form onSubmit={handleSubmit}>
               <Flex direction="column" gap="4">
@@ -315,13 +388,21 @@ export default function InvitadosPage() {
                     >
                       Restricción
                     </Text>
-                    <TextField.Root
-                      mt="1"
-                      size="3"
-                      placeholder="Celiaquía..."
+                    <Select.Root
                       value={restriccion}
-                      onChange={(e) => setRestriccion(e.target.value)}
-                    />
+                      onValueChange={setRestriccion}
+                    >
+                      <Select.Trigger mt="1" size="3" className="w-full" />
+                      <Select.Content>
+                        <Select.Item value="ninguna">Ninguna</Select.Item>
+                        <Select.Item value="vegetariano">
+                          Vegetariano
+                        </Select.Item>
+                        <Select.Item value="vegano">Vegano</Select.Item>
+                        <Select.Item value="celiaco">Celíaco</Select.Item>
+                        <Select.Item value="otro">Otro</Select.Item>
+                      </Select.Content>
+                    </Select.Root>
                   </Box>
                 </Flex>
                 <Flex gap="3" justify="end" mt="2">
@@ -336,7 +417,7 @@ export default function InvitadosPage() {
                     size="3"
                     className="font-bold px-6"
                   >
-                    Guardar
+                    {editingInvitado ? "Actualizar" : "Guardar"}
                   </Button>
                 </Flex>
               </Flex>

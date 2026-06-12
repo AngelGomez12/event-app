@@ -15,6 +15,7 @@ import {
   Box,
   Separator,
   Spinner,
+  Callout,
 } from "@radix-ui/themes";
 import { Plus, User, AlertCircle, Search, X } from "lucide-react";
 import {
@@ -23,6 +24,8 @@ import {
   useDroppable,
   DragEndEvent,
 } from "@dnd-kit/core";
+import FloorPlanCanvas from "@/components/floor-plan/FloorPlanCanvas";
+import { useFloorPlanStore } from "@/store/useFloorPlanStore";
 
 function DraggableGuest({ guest }: { guest: Invitado }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -68,32 +71,39 @@ function DraggableGuest({ guest }: { guest: Invitado }) {
   );
 }
 
-function DroppableTable({
-  id,
-  title,
-  children,
-}: {
-  id: string;
-  title: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function UnassignedDroppable({ children, count }: { children: React.ReactNode, count: number }) {
   const { isOver, setNodeRef } = useDroppable({
-    id: id,
+    id: "unassigned",
   });
 
   return (
     <Card
-      size="3"
+      size="2"
+      ref={setNodeRef}
       style={{
-        border: isOver ? "2px dashed var(--violet-9)" : undefined,
-        transition: "border 0.2s ease",
+        border: isOver ? "1px solid var(--violet-8)" : "1px solid var(--amber-6)",
+        background: isOver ? "var(--violet-1)" : "var(--amber-1)",
+        transition: "all 0.2s ease",
       }}
     >
-      {title}
-      <Separator size="4" mb="3" />
+      <Flex align="center" gap="2" mb="3">
+        <AlertCircle size={14} style={{ color: isOver ? "var(--violet-9)" : "var(--amber-9)" }} />
+        <Text
+          size="2"
+          weight="bold"
+          style={{ color: isOver ? "var(--violet-11)" : "var(--amber-11)" }}
+        >
+          Sin Asignar ({count})
+        </Text>
+      </Flex>
+
       <div
-        ref={setNodeRef}
-        style={{ minHeight: 120, display: "flex", flexDirection: "column" }}
+        style={{
+          maxHeight: "65vh",
+          overflowY: "auto",
+          paddingRight: 4,
+          minHeight: "100px",
+        }}
       >
         {children}
       </div>
@@ -110,7 +120,7 @@ export default function MesasPage() {
     fetchInvitados,
     fetchMesas,
     assignMesa,
-    isLoading,
+    error: guestError,
   } = useGuestStore();
 
   const [newTable, setNewTable] = useState("");
@@ -162,16 +172,11 @@ export default function MesasPage() {
     const guest = invitados.find((i) => i.id === guestId);
     if (!guest) return;
 
-    const targetMesa =
-      destinationMesaId === "unassigned" ? "none" : destinationMesaId;
+    const targetMesa = destinationMesaId === "unassigned" ? "none" : destinationMesaId;
 
     if ((guest.mesaId || "none") !== targetMesa) {
       assignMesa(guestId, targetMesa);
     }
-  };
-
-  const removeGuestFromTable = (guestId: string) => {
-    assignMesa(guestId, "none");
   };
 
   if (!myEvent) {
@@ -185,42 +190,26 @@ export default function MesasPage() {
   const confirmadosSinMesa = invitados.filter(
     (i) => i.estado === "confirmado" && !i.mesaId,
   );
-  const getGuestsForTable = (mesaId: string) => {
-    if (!mesaId) return [];
-    return invitados.filter((i) => i.mesaId === mesaId);
-  };
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
       <Flex direction="column" gap="6">
+        {guestError && (
+          <Callout.Root color="red" size="1">
+            <Callout.Icon>
+              <AlertCircle size={16} />
+            </Callout.Icon>
+            <Callout.Text>{guestError}</Callout.Text>
+          </Callout.Root>
+        )}
         <Flex justify="between" align="center">
           <Flex direction="column" gap="1">
             <Heading size="7" weight="bold">
-              Organización de Mesas
+              Organización de Mesas y Plano
             </Heading>
-            <Flex align="center" gap="3">
-              <Text size="2" color="gray">
-                Ubicá a tus invitados en las mesas disponibles
-              </Text>
-              {myEvent && (
-                <>
-                  <Separator orientation="vertical" size="1" />
-                  <Badge
-                    color={
-                      myEvent.maxTableCount > 0 &&
-                      mesas.length >= myEvent.maxTableCount
-                        ? "red"
-                        : "blue"
-                    }
-                    variant="soft"
-                  >
-                    {myEvent.maxTableCount > 0
-                      ? `${mesas.length} de ${myEvent.maxTableCount} mesas creadas`
-                      : `${mesas.length} mesas creadas`}
-                  </Badge>
-                </>
-              )}
-            </Flex>
+            <Text size="2" color="gray">
+              Diseñá tu salón y ubicá a tus invitados
+            </Text>
           </Flex>
 
           <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -273,155 +262,44 @@ export default function MesasPage() {
           </Dialog.Root>
         </Flex>
 
-        <Box style={{ maxWidth: 400 }}>
-          <TextField.Root
-            placeholder="Buscar invitado..."
-            size="3"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          >
-            <TextField.Slot>
-              <Search size={16} />
-            </TextField.Slot>
-            {searchQuery && (
-              <TextField.Slot side="right">
-                <Button
-                  variant="ghost"
-                  color="gray"
-                  size="1"
-                  onClick={() => setSearchQuery("")}
-                >
-                  <X size={14} />
-                </Button>
-              </TextField.Slot>
-            )}
-          </TextField.Root>
-        </Box>
-
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Panel lateral: Sin Asignar */}
-          <div className="w-full lg:w-72 shrink-0">
-            <Card
-              size="3"
-              style={{
-                border: "1px solid var(--amber-6)",
-                background: "var(--amber-1)",
-              }}
-            >
-              <Flex align="center" gap="2" mb="3">
-                <AlertCircle size={16} style={{ color: "var(--amber-9)" }} />
-                <Text
-                  size="2"
-                  weight="bold"
-                  style={{ color: "var(--amber-11)" }}
-                >
-                  Sin Asignar ({confirmadosSinMesa.length})
-                </Text>
-              </Flex>
+          <div className="w-full lg:w-80 shrink-0">
+            <Flex direction="column" gap="4">
+              <TextField.Root
+                placeholder="Buscar invitado..."
+                size="2"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              >
+                <TextField.Slot>
+                  <Search size={14} />
+                </TextField.Slot>
+              </TextField.Root>
 
-              {/* Unassigned Area is Droppable too */}
-              <div className="unassigned-droppable">
-                {isLoading && confirmadosSinMesa.length === 0 ? (
-                  <Flex justify="center" py="4">
-                    <Spinner size="2" />
-                  </Flex>
-                ) : (
-                  <DroppableTable
-                    id="unassigned"
-                    title={
-                      <Text size="1" color="gray" style={{ display: "none" }}>
-                        Drop here
-                      </Text>
-                    }
+              <UnassignedDroppable count={confirmadosSinMesa.length}>
+                {confirmadosSinMesa.map((guest) => (
+                  <DraggableGuest key={guest.id} guest={guest} />
+                ))}
+                {confirmadosSinMesa.length === 0 && (
+                  <Text
+                    key="no-guests"
+                    size="2"
+                    color="gray"
+                    style={{
+                      fontStyle: "italic",
+                      textAlign: "center",
+                      padding: "20px 0",
+                    }}
                   >
-                    <div
-                      style={{
-                        maxHeight: "60vh",
-                        overflowY: "auto",
-                        paddingRight: 4,
-                      }}
-                    >
-                      {confirmadosSinMesa.map((guest) => (
-                        <DraggableGuest key={guest.id} guest={guest} />
-                      ))}
-                      {confirmadosSinMesa.length === 0 && (
-                        <Text
-                          key="no-guests"
-                          size="2"
-                          color="gray"
-                          style={{
-                            fontStyle: "italic",
-                            textAlign: "center",
-                            padding: "20px 0",
-                          }}
-                        >
-                          Todos los filtrados tienen mesa asignada o no hay
-                          resultados.
-                        </Text>
-                      )}
-                    </div>
-                  </DroppableTable>
+                    No hay invitados confirmados sin mesa.
+                  </Text>
                 )}
-              </div>
-            </Card>
+              </UnassignedDroppable>
+            </Flex>
           </div>
 
-          {/* Grilla de mesas */}
-          <div className="flex-1 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-            {mesas.map((mesa) => {
-              const guests = getGuestsForTable(mesa.id);
-              return (
-                <DroppableTable
-                  key={mesa.id}
-                  id={mesa.id}
-                  title={
-                    <Flex justify="between" align="center" mb="3">
-                      <Text weight="bold" size="3">
-                        {mesa.nombre}
-                      </Text>
-                      <Badge color="violet" variant="soft" radius="full">
-                        {guests.length} pax
-                      </Badge>
-                    </Flex>
-                  }
-                >
-                  <Flex
-                    direction="column"
-                    style={{ minHeight: 80, height: "100%" }}
-                  >
-                    {guests.map((guest) => (
-                      <DraggableGuest key={guest.id} guest={guest} />
-                    ))}
-                    {guests.length === 0 && (
-                      <Text
-                        key="empty-mesa"
-                        size="2"
-                        color="gray"
-                        style={{
-                          fontStyle: "italic",
-                          textAlign: "center",
-                          margin: "auto",
-                          opacity: 0.7,
-                        }}
-                      >
-                        Arrastrá invitados aquí
-                      </Text>
-                    )}
-                  </Flex>
-                </DroppableTable>
-              );
-            })}
-            {mesas.length === 0 && (
-              <Flex
-                align="center"
-                justify="center"
-                style={{ gridColumn: "1 / -1", minHeight: 200 }}
-              >
-                <Text color="gray" size="3">
-                  Todavía no creaste ninguna mesa.
-                </Text>
-              </Flex>
-            )}
+          <div className="flex-1">
+            <FloorPlanCanvas />
           </div>
         </div>
       </Flex>

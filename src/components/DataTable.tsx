@@ -175,7 +175,7 @@ export function DataTable<T extends { id: string | number }>({
                 <Table.Row className="bg-slate-50/50">
                   {columns.map((col, idx) => (
                     <Table.ColumnHeaderCell
-                      key={idx}
+                      key={`header-${col.header}-${idx}`}
                       className={col.className}
                       justify={col.align}
                     >
@@ -188,15 +188,15 @@ export function DataTable<T extends { id: string | number }>({
               </Table.Header>
 
               <Table.Body>
-                {data.map((item) => (
+                {data.map((item, index) => (
                   <Table.Row
-                    key={item.id}
+                    key={item.id || `row-${index}`}
                     align="center"
                     className="hover:bg-slate-50/50 transition-colors group"
                   >
                     {columns.map((col, idx) => (
                       <Table.Cell
-                        key={idx}
+                        key={`cell-${item.id || index}-${idx}`}
                         justify={col.align}
                         className="py-4"
                       >

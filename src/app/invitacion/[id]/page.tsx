@@ -1,7 +1,6 @@
 "use client";
 
-import { Event } from "@/lib/api";
-import { Invitado } from "@/store/useGuestStore";
+import { guestService } from "@/services/guest.service";
 import {
   Box,
   Card,
@@ -17,32 +16,45 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 
 export default function InvitacionPublicaPage() {
-  const { id: guestId } = useParams();
-  const [invitado, setInvitado] = useState<Invitado | null>(null);
-  const [evento, setEvento] = useState<Event | null>(null);
+  const params = useParams();
+  const guestId = params?.id as string;
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!guestId) return;
       try {
-        // En una app real, este ID vendría de un token o el backend tendría un endpoint público
-        // Para este demo, intentamos buscarlo (necesitaríamos el eventId que lo sacaremos del invitado en el backend real)
-        // Por ahora simulamos la data si no tenemos el eventId a mano fácilmente
         setLoading(true);
-
-        // Simulación de fetch (esto se conectaría a un endpoint público /public/guest/:id)
-        // Por ahora mostramos lo que el invitado vería
-        setTimeout(() => {
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error("Error fetching invitation", error);
+        const invitationData = await guestService.getPublicInvitation(guestId);
+        setData(invitationData.data);
+      } catch (err: any) {
+        console.error("Error fetching invitation", err);
+        setError(
+          "No pudimos encontrar tu invitación. Por favor verificá el link.",
+        );
+      } finally {
         setLoading(false);
       }
     };
 
-    if (guestId) fetchData();
+    fetchData();
   }, [guestId]);
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat("es-AR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(date);
+  };
 
   if (loading) {
     return (
@@ -51,10 +63,37 @@ export default function InvitacionPublicaPage() {
         align="center"
         className="min-h-screen bg-slate-50"
       >
-        <Spinner size="3" />
+        <Flex direction="column" align="center" gap="4">
+          <Spinner size="3" />
+          <Text color="gray" size="2">
+            Cargando tu invitación...
+          </Text>
+        </Flex>
       </Flex>
     );
   }
+
+  if (error || !data) {
+    return (
+      <Flex
+        justify="center"
+        align="center"
+        className="min-h-screen bg-slate-50 p-6"
+      >
+        <Card size="3" style={{ maxWidth: 400 }} className="text-center p-8">
+          <Heading color="red" mb="2">
+            ¡Ups!
+          </Heading>
+          <Text size="3" color="gray">
+            {error || "Algo salió mal al cargar los datos."}
+          </Text>
+        </Card>
+      </Flex>
+    );
+  }
+
+  const { fullName, event } = data;
+  const tenant = event?.tenant;
 
   return (
     <Box className="min-h-screen bg-slate-50 p-6 md:p-12">
@@ -86,7 +125,7 @@ export default function InvitacionPublicaPage() {
               Invitación Digital
             </Text>
             <Heading size="8" weight="bold" className="tracking-tighter">
-              ¡Te esperamos!
+              ¡Te esperamos {event?.honoreeName}!
             </Heading>
           </Box>
 
@@ -95,7 +134,7 @@ export default function InvitacionPublicaPage() {
             <Flex direction="column" align="center" gap="4" className="py-2">
               <Box className="p-4 bg-white border-2 border-slate-100 rounded-3xl shadow-sm">
                 <QRCodeSVG
-                  value={guestId as string}
+                  value={guestId}
                   size={200}
                   level="H"
                   includeMargin={true}
@@ -130,7 +169,7 @@ export default function InvitacionPublicaPage() {
                     Invitado
                   </Text>
                   <Text size="3" weight="bold" className="text-slate-900">
-                    Juan Perez (Demo)
+                    {fullName}
                   </Text>
                 </Box>
               </Flex>
@@ -147,8 +186,12 @@ export default function InvitacionPublicaPage() {
                   >
                     Fecha y Hora
                   </Text>
-                  <Text size="3" weight="bold" className="text-slate-900">
-                    Sábado 25 de Abril, 21:00hs
+                  <Text
+                    size="3"
+                    weight="bold"
+                    className="text-slate-900 capitalize"
+                  >
+                    {formatDate(event?.date)}
                   </Text>
                 </Box>
               </Flex>
@@ -166,14 +209,15 @@ export default function InvitacionPublicaPage() {
                     Ubicación
                   </Text>
                   <Text size="3" weight="bold" className="text-slate-900">
-                    Salón &quot;La Riviera&quot;, Calle Falsa 123
+                    Salón {tenant?.name || "A confirmar"},{" "}
+                    {tenant?.address || "Dirección pendiente"}
                   </Text>
                 </Box>
               </Flex>
             </Flex>
 
             <Box className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center">
-              <Text size="2" color="gray" className="font-medium italic italic">
+              <Text size="2" color="gray" className="font-medium italic">
                 &quot;Presenta este código en la entrada para agilizar tu
                 ingreso.&quot;
               </Text>
